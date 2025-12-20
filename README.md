@@ -1,36 +1,121 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🤖 AI Agent Command Center
 
-## Getting Started
+A real-time dashboard for managing AI coding assistants with OpenCode integration.
 
-First, run the development server:
+## 🌟 Features
+
+- **Real-time AI Chat** - Natural language conversations with OpenCode + Grok models
+- **System Monitoring** - Live CPU, memory, and network statistics
+- **Agent Management** - Control multiple AI assistants with status monitoring
+- **Project Overview** - Track coding projects and Git statistics
+- **Dark Theme UI** - Modern, responsive design with Tailwind CSS
+
+## 🚀 Quick Start
+
+### Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Visit http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Production Build
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm start
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🐳 Coolify Deployment
 
-## Learn More
+### 1. Add Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+In your Coolify service, add these environment variables:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+OPEN_CODE_SERVER_URL=http://142.132.171.59:4096
+NODE_ENV=production
+PORT=3000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 2. Build Settings
 
-## Deploy on Vercel
+- **Build Command**: `npm run build`
+- **Start Command**: `npm start`
+- **Port**: `3000`
+- **Docker**: Enable (uses included Dockerfile)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Connect your GitHub repository: `ArkMaster123/coolify-opencode-command-center`
+2. Coolify will automatically build and deploy
+3. Access your dashboard at the assigned domain
+
+## 🔧 Configuration
+
+### Environment Variables
+
+- `OPEN_CODE_SERVER_URL` - Your OpenCode server URL (default: `http://142.132.171.59:4096`)
+- `NODE_ENV` - Environment mode
+- `PORT` - Port to run on (default: 3000)
+
+## 🏗️ Architecture
+
+- **Frontend**: Next.js 16 + TypeScript + Tailwind CSS
+- **Backend**: Next.js API routes
+- **AI Integration**: OpenCode SDK with Grok models
+- **UI Components**: Radix UI + Lucide Icons
+- **Styling**: Tailwind CSS v4
+
+## 📁 Project Structure
+
+```
+src/
+├── app/
+│   ├── api/           # Server-side API routes
+│   │   ├── chat/      # AI chat endpoint
+│   │   ├── agents/    # Agent management
+│   │   ├── projects/  # Project data
+│   │   └── status/    # Connection status
+│   ├── layout.tsx     # Root layout
+│   └── page.tsx       # Main dashboard
+├── components/        # React components
+│   ├── ui/           # Reusable UI components
+│   ├── ChatInterface.tsx
+│   ├── SystemMonitor.tsx
+│   ├── AgentManager.tsx
+│   └── ProjectOverview.tsx
+└── lib/
+    └── utils.ts      # Utility functions
+```
+
+## 🔒 Security
+
+- No hardcoded secrets or API keys
+- Server-side API routes handle OpenCode communication
+- Environment variables for configuration
+- Clean separation of client/server code
+
+## 🚀 Deployment Status
+
+✅ **Build**: Successful (Next.js 16 + Turbopack)  
+✅ **GitHub**: Repository created and pushed  
+✅ **Docker**: Dockerfile included  
+✅ **Coolify**: Ready for deployment  
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test locally
+5. Submit a pull request
+
+## 📄 License
+
+MIT License - feel free to use this project for your own AI command centers!
+
+---
+
+**Built with ❤️ for the AI coding community**

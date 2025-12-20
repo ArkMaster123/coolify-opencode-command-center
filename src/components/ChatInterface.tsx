@@ -209,7 +209,7 @@ export function ChatInterface() {
 
         <div className="text-xs text-slate-400 text-center">
           {isConnected ? (
-            <>🟢 Connected to OpenCode server at 142.132.171.59:4096 • Session: {sessionId?.slice(-8) || 'active'} • Using grok-code model</>
+            <>🟢 Connected to OpenCode server • Session: {sessionId?.slice(-8) || 'active'} • Using grok-code model</>
           ) : (
             <>🔴 Connecting to OpenCode server...</>
           )}

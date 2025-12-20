@@ -6,8 +6,9 @@ let currentSession: any = null
 
 async function getClient() {
   if (!opencodeClient) {
+    const serverUrl = process.env.OPEN_CODE_SERVER_URL || 'http://142.132.171.59:4096'
     opencodeClient = createOpencodeClient({
-      baseUrl: 'http://142.132.171.59:4096'
+      baseUrl: serverUrl
     })
   }
   return opencodeClient

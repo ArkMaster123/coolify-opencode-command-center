@@ -78,7 +78,7 @@ export function SystemMonitor() {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="text-slate-400">Host:</span>
-            <span className="text-white ml-2">142.132.171.59</span>
+            <span className="text-white ml-2">{process.env.OPEN_CODE_SERVER_URL?.replace('http://', '').replace(':4096', '') || '142.132.171.59'}</span>
           </div>
           <div>
             <span className="text-slate-400">Uptime:</span>

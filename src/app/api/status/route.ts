@@ -3,8 +3,9 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
+    const serverUrl = process.env.OPEN_CODE_SERVER_URL || 'http://142.132.171.59:4096'
     const client = createOpencodeClient({
-      baseUrl: 'http://142.132.171.59:4096'
+      baseUrl: serverUrl
     })
 
     // Test connection by fetching config
