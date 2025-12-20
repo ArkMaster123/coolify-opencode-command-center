@@ -27,30 +27,52 @@ npm run build
 npm start
 ```
 
-## 🐳 Coolify Deployment
+## 🐳 Coolify Deployment (Nixpacks)
 
 ### 1. Add Environment Variables
 
-In your Coolify service, add these environment variables:
+In your Coolify service settings, add these **required** environment variables:
 
 ```
 OPEN_CODE_SERVER_URL=http://142.132.171.59:4096
 NODE_ENV=production
 PORT=3000
+NIXPACKS_NODE_VERSION=22
 ```
 
-### 2. Build Settings
+### 2. Repository Settings
 
-- **Build Command**: `npm run build`
-- **Start Command**: `npm start`
-- **Port**: `3000`
-- **Docker**: Enable (uses included Dockerfile)
+- **Repository**: `https://github.com/ArkMaster123/coolify-opencode-command-center`
+- **Branch**: `main`
+- **Build Pack**: `Nixpacks` (auto-detected)
 
-### 3. Deploy
+### 3. Build Settings
 
-1. Connect your GitHub repository: `ArkMaster123/coolify-opencode-command-center`
-2. Coolify will automatically build and deploy
-3. Access your dashboard at the assigned domain
+Coolify will automatically detect:
+- **Node.js 22** (via nixpacks.toml)
+- **npm ci** for dependencies
+- **npm run build** for build
+- **npm start** for production
+
+### 4. Domains & Ports
+
+- **Internal Port**: `3000`
+- **Assign a domain** in Coolify (e.g., `ai-command-center.yourdomain.com`)
+
+### 5. Deploy
+
+1. Save the service configuration
+2. Coolify will build using Nixpacks v1.41.0
+3. Monitor the build logs for success
+4. Access your dashboard at the assigned domain
+
+### Troubleshooting
+
+If deployment fails:
+1. Check the build logs in Coolify
+2. Ensure all environment variables are set
+3. Verify OpenCode server is accessible: `http://142.132.171.59:4096`
+4. Check that PORT=3000 is set
 
 ## 🔧 Configuration
 
