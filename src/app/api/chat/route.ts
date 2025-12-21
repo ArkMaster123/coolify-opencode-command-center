@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
         console.log(`🤖 Using model: ${providerID}/${modelID}`)
         
         // SDK returns { error?, request, response } format
+        // API returns { info: AssistantMessage, parts: Part[] }
         const promptResponse = await client.session.prompt({
           path: { id: session.id },
           body: {
@@ -113,20 +114,21 @@ export async function POST(request: NextRequest) {
           throw new Error(`Prompt failed: ${promptResponse.error.name} - ${promptResponse.error.message || 'Unknown error'}`)
         }
         
-        // Extract AssistantMessage from response.data
+        // Extract response data - format is { info: AssistantMessage, parts: Part[] }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const assistantMessage = promptResponse?.response?.data || promptResponse?.data || promptResponse
+        const responseData = promptResponse?.response?.data || promptResponse?.data || promptResponse
         
-        // AssistantMessage has parts directly
+        // API returns { info, parts } - parts is directly on the response object
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        result = { parts: assistantMessage?.parts || [] }
+        const parts = responseData?.parts || []
+        
+        result = { parts }
         
         console.log('✅ Session prompt successful')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const parts = assistantMessage?.parts || []
         console.log('📝 Response:', { 
           hasParts: !!parts, 
-          partsCount: Array.isArray(parts) ? parts.length : 0
+          partsCount: Array.isArray(parts) ? parts.length : 0,
+          responseKeys: responseData ? Object.keys(responseData).join(', ') : 'null'
         })
       } else {
         // Fallback: try direct prompt or simulated response

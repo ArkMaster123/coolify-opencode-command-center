@@ -55,7 +55,15 @@ async function testSession() {
       console.log('   Keys:', promptResult ? Object.keys(promptResult).join(', ') : 'null')
       console.log('   Has parts:', !!promptResult?.parts)
       console.log('   Has data property:', !!promptResult?.data)
-      console.log('   Parts:', JSON.stringify(promptResult?.parts || promptResult?.data?.parts, null, 2))
+      console.log('   Data keys:', promptResult?.data ? Object.keys(promptResult.data).join(', ') : 'null')
+      console.log('   Data parts:', promptResult?.data?.parts ? `Found ${promptResult.data.parts.length} parts` : 'No parts')
+      console.log('   Has error:', !!promptResult?.error)
+      if (promptResult?.error) {
+        console.log('   Error:', promptResult.error.name, promptResult.error.message)
+      }
+      console.log('   Response status:', promptResult?.response?.status)
+      console.log('   Response headers:', promptResult?.response?.headers ? Object.keys(promptResult.response.headers).join(', ') : 'none')
+      console.log('   Full prompt result:', JSON.stringify(promptResult, null, 2))
     }
     
   } catch (error) {
