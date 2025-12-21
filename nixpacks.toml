@@ -9,8 +9,10 @@ cmds = [
 
 [phases.build]
 cmds = [
-  "NODE_ENV=production npm run build"
+  "NODE_ENV=production npm run build",
+  "cp -r .next/static .next/standalone/.next/static || true",
+  "cp -r public .next/standalone/public || true"
 ]
 
 [start]
-cmd = "NODE_ENV=production PORT=${PORT:-3000} node .next/standalone/server.js"
+cmd = "cd .next/standalone && NODE_ENV=production PORT=${PORT:-3000} node server.js"
