@@ -10,10 +10,18 @@ interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
-  timestamp: Date
+  timestamp: Date | string
 }
 
 export function ChatInterface() {
+  const formatTimestamp = (timestamp: Date | string) => {
+    const dateObj = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
+    if (!dateObj || isNaN(dateObj.getTime())) {
+      return 'Unknown time'
+    }
+    return dateObj.toLocaleTimeString()
+  }
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -150,7 +158,7 @@ export function ChatInterface() {
               >
                 <p className="text-sm">{message.content}</p>
                 <p className="text-xs opacity-70 mt-1">
-                  {message.timestamp.toLocaleTimeString()}
+                  {formatTimestamp(message.timestamp)}
                 </p>
               </div>
 
