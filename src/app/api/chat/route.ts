@@ -45,7 +45,7 @@ async function getSession(client: any) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { message } = await request.json()
+    const { message, model: userModel } = await request.json()
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
@@ -68,9 +68,12 @@ export async function POST(request: NextRequest) {
       if (session && session.id && !session.fallback) {
         // Use session-based prompt
         console.log('📤 Sending session-based prompt...')
-        // Use configured model or fallback to Anthropic Claude
-        const modelConfig = process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
+        // Use user-selected model or default to FREE grok-code-fast-1
+        const defaultModel = process.env.DEFAULT_MODEL || 'opencode/grok-code-fast-1'
+        const modelConfig = userModel || defaultModel
         const [providerID, modelID] = modelConfig.split('/')
+        
+        console.log(`🤖 Using model: ${providerID}/${modelID}`)
         
         result = await client.session.prompt({
           path: { id: session.id },

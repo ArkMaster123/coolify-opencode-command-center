@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Loader2 } from 'lucide-react'
+import { Send, Bot, User, Loader2, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,29 @@ interface Message {
   content: string
   timestamp: Date | string
 }
+
+// Available models for selection - OpenCode Zen models first!
+const AVAILABLE_MODELS = [
+  // 🆓 FREE OpenCode Zen Models
+  { id: 'opencode/grok-code-fast-1', name: '⚡ Grok Code Fast 1', provider: 'OpenCode Zen (FREE)', free: true },
+  { id: 'opencode/big-pickle', name: '🥒 Big Pickle', provider: 'OpenCode Zen (FREE)', free: true },
+  { id: 'opencode/gpt-5-nano', name: '🔬 GPT-5 Nano', provider: 'OpenCode Zen (FREE)', free: true },
+  
+  // xAI Grok Models
+  { id: 'xai/grok-2', name: 'Grok 2', provider: 'xAI', free: false },
+  { id: 'xai/grok-2-mini', name: 'Grok 2 Mini', provider: 'xAI', free: false },
+  
+  // Anthropic Claude Models
+  { id: 'anthropic/claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', free: false },
+  { id: 'anthropic/claude-3-haiku-20240307', name: 'Claude 3 Haiku', provider: 'Anthropic', free: false },
+  
+  // OpenAI Models
+  { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'OpenAI', free: false },
+  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', free: false },
+  
+  // Google Models
+  { id: 'google/gemini-pro', name: 'Gemini Pro', provider: 'Google', free: false },
+]
 
 export function ChatInterface() {
   const formatTimestamp = (timestamp: Date | string) => {
@@ -34,6 +57,8 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
   const [sessionId, setSessionId] = useState<string>('')
+  const [selectedModel, setSelectedModel] = useState('opencode/grok-code-fast-1')
+  const [showModelDropdown, setShowModelDropdown] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Check connection status
@@ -77,11 +102,11 @@ export function ChatInterface() {
     setIsLoading(true)
 
     try {
-      // Send message via API route
+      // Send message via API route with selected model
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input })
+        body: JSON.stringify({ message: input, model: selectedModel })
       })
 
       const data = await response.json()
@@ -121,14 +146,56 @@ export function ChatInterface() {
 
   return (
     <Card className="bg-slate-800/50 border-slate-700 h-[600px] flex flex-col">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-white">
-          <Bot className="h-5 w-5 text-blue-400" />
-          AI Assistant Chat
-          <Badge variant="secondary" className="bg-green-500/10 text-green-400 border-green-500/20">
-            Connected
-          </Badge>
-        </CardTitle>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-white">
+            <Bot className="h-5 w-5 text-blue-400" />
+            AI Assistant Chat
+            <Badge variant="secondary" className={isConnected ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"}>
+              {isConnected ? 'Connected' : 'Disconnected'}
+            </Badge>
+          </CardTitle>
+          
+          {/* Model Selector */}
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-600 min-w-[180px] justify-between"
+              onClick={() => setShowModelDropdown(!showModelDropdown)}
+            >
+              <span className="truncate">
+                {AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || 'Select Model'}
+              </span>
+              <ChevronDown className="h-4 w-4 ml-2" />
+            </Button>
+            
+            {showModelDropdown && (
+              <div className="absolute right-0 mt-1 w-72 bg-slate-800 border border-slate-600 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                {AVAILABLE_MODELS.map((model) => (
+                  <button
+                    key={model.id}
+                    className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-700 first:rounded-t-lg last:rounded-b-lg ${
+                      selectedModel === model.id ? 'bg-slate-700 text-blue-400' : 'text-slate-300'
+                    }`}
+                    onClick={() => {
+                      setSelectedModel(model.id)
+                      setShowModelDropdown(false)
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{model.name}</span>
+                      {model.free && (
+                        <span className="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full">FREE</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-slate-500">{model.provider}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col space-y-4">

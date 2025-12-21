@@ -42,11 +42,13 @@ export async function GET() {
     // Get providers to show real models
     const providers = await client.config.providers()
     const realModels = Object.values(providers.data.default || {})
-    // Use real model names from config, fallback to common models
+    // Use OpenCode Zen FREE models as default!
     const allModels: string[] = [
-      process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022',
-      'anthropic/claude-3-haiku-20240307',
-      'openai/gpt-4o-mini',
+      process.env.DEFAULT_MODEL || 'opencode/grok-code-fast-1',
+      'opencode/big-pickle',
+      'opencode/gpt-5-nano',
+      'xai/grok-2',
+      'anthropic/claude-3-5-sonnet-20241022',
       ...(realModels as string[])
     ]
 

@@ -1,16 +1,16 @@
 {
-  "model": "anthropic/claude-3-5-sonnet-20241022",
+  "model": "opencode/grok-code-fast-1",
   "agents": {
     "code-assistant": {
-      "model": "anthropic/claude-3-5-sonnet-20241022",
+      "model": "opencode/grok-code-fast-1",
       "role": "You are an expert coding assistant helping with software development tasks."
     },
     "debug-helper": {
-      "model": "anthropic/claude-3-5-sonnet-20241022",
+      "model": "opencode/big-pickle",
       "role": "You are a debugging specialist helping identify and fix code issues."
     },
     "project-manager": {
-      "model": "anthropic/claude-3-5-sonnet-20241022",
+      "model": "opencode/gpt-5-nano",
       "role": "You are a project management assistant helping with planning and organization."
     }
   },
