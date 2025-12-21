@@ -16,21 +16,37 @@ async function checkLocalServer(serverUrl: string): Promise<boolean> {
   
   for (const endpoint of endpoints) {
     try {
+      // Use longer timeout and handle errors better
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 2000) // 2 second timeout
+      
       const response = await fetch(`${serverUrl}${endpoint}`, {
         method: 'GET',
-        signal: AbortSignal.timeout(500) // 500ms timeout
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
       })
-      // Any HTTP response means server is running (even errors)
+      
+      clearTimeout(timeoutId)
+      
+      // Any HTTP response (200-499) means server is running
       if (response.status >= 200 && response.status < 500) {
         console.log(`✅ OpenCode server detected at ${serverUrl}${endpoint} (status: ${response.status})`)
         return true
       }
     } catch (err) {
+      // Log error for debugging but continue to next endpoint
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      if (!errorMsg.includes('aborted') && !errorMsg.includes('ECONNREFUSED')) {
+        console.log(`⚠️  Check ${endpoint} failed: ${errorMsg}`)
+      }
       // Continue to next endpoint
       continue
     }
   }
   
+  console.log(`❌ No OpenCode server found at ${serverUrl} (tried: ${endpoints.join(', ')})`)
   return false
 }
 
@@ -49,7 +65,20 @@ export async function getOpencodeClient() {
   let mode = explicitMode
   if (!mode || mode !== 'embedded') {
     console.log(`🔍 Checking for local OpenCode server at ${serverUrl}...`)
-    const localServerRunning = await checkLocalServer(serverUrl)
+    let localServerRunning = await checkLocalServer(serverUrl)
+    
+    // Fallback: Try direct SDK connection test
+    if (!localServerRunning) {
+      try {
+        const testClient = createOpencodeClient({ baseUrl: serverUrl })
+        await testClient.config.get()
+        localServerRunning = true
+        console.log(`✅ Server found via SDK connection test`)
+      } catch {
+        // Server not available
+      }
+    }
+    
     if (localServerRunning) {
       mode = 'client'
       detectedMode = 'client'
