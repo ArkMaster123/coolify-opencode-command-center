@@ -1,0 +1,4 @@
+# This file indicates the build path for Nixpacks
+# Since this IS the root of the repository, no path change needed
+# Coolify should build from the repository root
+

@@ -2,6 +2,19 @@
 
 ## ✅ Pre-Deployment Checklist
 
+### 0. Repository Structure (VERIFY FIRST!)
+
+**IMPORTANT**: Make sure Coolify is building from the **repository root**, not a subdirectory.
+
+- ✅ Repository: `https://github.com/ArkMaster123/coolify-opencode-command-center`
+- ✅ Branch: `main`
+- ✅ Build Path: **Leave empty** (builds from root)
+- ✅ The `package.json` should be at the root of the repo
+
+If you see a 404, check:
+1. Coolify → Service → Configuration → **Build Path** should be empty (not `ai-command-center`)
+2. The repository root should have `package.json`, `next.config.ts`, etc.
+
 ### 1. Environment Variables (CRITICAL!)
 
 In Coolify service settings, add these **exact** environment variables:
