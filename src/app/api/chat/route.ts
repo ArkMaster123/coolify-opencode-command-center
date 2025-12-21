@@ -18,7 +18,16 @@ async function getSession(client: any) {
       
       console.log('🔍 Session creation response type:', typeof sessionData)
       console.log('🔍 Session data keys:', sessionData ? Object.keys(sessionData).join(', ') : 'null')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const responseAny = response as any
+      console.log('🔍 Full response structure:', {
+        hasData: !!responseAny?.data,
+        hasId: !!sessionData?.id,
+        responseType: typeof response,
+        sessionDataType: typeof sessionData
+      })
       if (sessionData?.id) console.log('🔍 Session ID found:', sessionData.id)
+      else console.log('⚠️ No session ID in response:', response)
       
       if (sessionData && sessionData.id) {
         currentSession = sessionData
@@ -103,12 +112,22 @@ export async function POST(request: NextRequest) {
           }
         })
         
-        // SDK might return { data: Message } or just Message
+        // SDK response format: { info: Message, parts: Part[] } or { data: { info, parts } } or direct Message
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        result = (promptResponse as any)?.data || promptResponse
+        const responseData = (promptResponse as any)?.data || promptResponse
         
-        console.log('✅ Session prompt successful, response type:', typeof result)
-        console.log('📝 Response has parts:', !!result?.parts)
+        // Extract parts - could be directly on response or nested
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const parts = responseData?.parts || (responseData as any)?.info?.parts || []
+        
+        result = { parts }
+        
+        console.log('✅ Session prompt successful')
+        console.log('📝 Response structure:', { 
+          hasParts: !!parts, 
+          partsCount: Array.isArray(parts) ? parts.length : 0,
+          responseKeys: Object.keys(responseData || {})
+        })
       } else {
         // Fallback: try direct prompt or simulated response
         console.log('⚠️ Using fallback chat mode')
@@ -129,12 +148,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const assistantContent = result.parts
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ?.filter((part: any) => part.type === 'text')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ?.map((part: any) => part.text)
-      ?.join('') || 'I received your message but couldn\'t generate a response.'
+    // Extract text content from parts array
+    const parts = result?.parts || []
+    const assistantContent = Array.isArray(parts)
+      ? parts
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .filter((part: any) => part && part.type === 'text')
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((part: any) => part.text || '')
+          .join('')
+      : 'I received your message but couldn\'t generate a response.'
+    
+    console.log('📤 Extracted content length:', assistantContent.length)
 
     return NextResponse.json({
       response: assistantContent,
