@@ -1,31 +1,8 @@
-import { createOpencode } from '@opencode-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
+import { getOpencodeClient } from '@/lib/opencode'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let opencodeInstance: any = null
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let currentSession: any = null
-
-async function getOpencodeInstance() {
-  if (!opencodeInstance) {
-    try {
-      console.log('🚀 Starting embedded OpenCode server for chat...')
-      opencodeInstance = await createOpencode({
-        hostname: '0.0.0.0',
-        port: 4097,
-        timeout: 15000,
-        config: {
-          model: process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
-        }
-      })
-      console.log(`✅ OpenCode server started for chat at ${opencodeInstance.server.url}`)
-    } catch (error) {
-      console.error('❌ Failed to start OpenCode server for chat:', error)
-      throw error
-    }
-  }
-  return opencodeInstance
-}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getSession(client: any) {
@@ -51,8 +28,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
-    const opencode = await getOpencodeInstance()
-    const client = opencode.client
+    const { client, serverUrl } = await getOpencodeClient()
 
     // Try to get/create a session
     let session
@@ -112,9 +88,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       response: assistantContent,
-      sessionId: session?.id || 'embedded-session',
-      serverUrl: opencode.server.url,
-      mode: session?.fallback ? 'embedded_fallback' : 'embedded_session'
+      sessionId: session?.id || 'opencode-session',
+      serverUrl,
+      mode: session?.fallback ? 'fallback' : 'session'
     })
 
   } catch (error) {

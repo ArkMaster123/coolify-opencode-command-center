@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:local": "OPENCODE_MODE=client OPENCODE_SERVER_URL=http://127.0.0.1:4096 next dev",
     "build": "next build",
     "start": "next start -p ${PORT:-3000} -H 0.0.0.0",
     "lint": "next lint"

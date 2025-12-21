@@ -1,48 +1,27 @@
-import { createOpencode } from '@opencode-ai/sdk'
 import { NextResponse } from 'next/server'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let opencodeInstance: any = null
-
-async function getOpencodeInstance() {
-  if (!opencodeInstance) {
-    try {
-      console.log('🚀 Starting embedded OpenCode server...')
-      opencodeInstance = await createOpencode({
-        hostname: '0.0.0.0',
-        port: 4097,
-        timeout: 15000,
-        config: {
-          model: process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
-        }
-      })
-      console.log(`✅ OpenCode server started at ${opencodeInstance.server.url}`)
-    } catch (error) {
-      console.error('❌ Failed to start OpenCode server:', error)
-      throw error
-    }
-  }
-  return opencodeInstance
-}
+import { getOpencodeClient, getOpencodeMode } from '@/lib/opencode'
 
 export async function GET() {
   try {
-    const opencode = await getOpencodeInstance()
+    const { client, serverUrl } = await getOpencodeClient()
+    const mode = getOpencodeMode()
 
     // Test connection by fetching config
-    const config = await opencode.client.config.get()
+    const config = await client.config.get()
 
     return NextResponse.json({
       connected: true,
-      serverUrl: opencode.server.url,
+      serverUrl,
+      mode,
       config: config.data,
-      status: 'embedded_running'
+      status: mode === 'client' ? 'client_connected' : 'embedded_running'
     })
   } catch (error) {
     console.error('OpenCode status check failed:', error)
     return NextResponse.json({
       connected: false,
-      status: 'embedded_failed',
+      mode: getOpencodeMode(),
+      status: 'connection_failed',
       error: error instanceof Error ? error.message : 'Unknown error'
     })
   }

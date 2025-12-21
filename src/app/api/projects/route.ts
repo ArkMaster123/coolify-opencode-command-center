@@ -1,34 +1,9 @@
-import { createOpencode } from '@opencode-ai/sdk'
 import { NextResponse } from 'next/server'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let opencodeInstance: any = null
-
-async function getOpencodeInstance() {
-  if (!opencodeInstance) {
-    try {
-      console.log('🚀 Starting embedded OpenCode server for projects...')
-      opencodeInstance = await createOpencode({
-        hostname: '0.0.0.0',
-        port: 4097,
-        timeout: 15000,
-        config: {
-          model: process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
-        }
-      })
-      console.log(`✅ OpenCode server started for projects at ${opencodeInstance.server.url}`)
-    } catch (error) {
-      console.error('❌ Failed to start OpenCode server for projects:', error)
-      throw error
-    }
-  }
-  return opencodeInstance
-}
+import { getOpencodeClient } from '@/lib/opencode'
 
 export async function GET() {
   try {
-    const opencode = await getOpencodeInstance()
-    const client = opencode.client
+    const { client } = await getOpencodeClient()
 
     // Try to fetch real projects from embedded OpenCode server
     let projectList = []
