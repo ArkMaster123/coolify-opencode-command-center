@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "PORT=${PORT:-3000} next start",
+    "start": "next start --port ${PORT:-3000} --hostname 0.0.0.0",
     "lint": "next lint"
   },
   "dependencies": {
@@ -16,7 +16,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.562.0",
-    "next": "16.1.0",
+    "next": "15.1.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.6.0",
