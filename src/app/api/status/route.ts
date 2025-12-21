@@ -7,14 +7,21 @@ export async function GET() {
     const mode = getOpencodeMode()
 
     // Test connection by fetching config
-    const config = await client.config.get()
+    // SDK returns { error?, request, response } format
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const configResponse = await client.config.get() as any
+    
+    // Config errors are OK - server is still running
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const configData = configResponse?.response?.data || configResponse?.data || configResponse
 
     return NextResponse.json({
       connected: true,
       serverUrl,
       mode,
-      config: config.data,
-      status: mode === 'client' ? 'client_connected' : 'embedded_running'
+      config: configData,
+      status: mode === 'client' ? 'client_connected' : 'embedded_running',
+      hasConfigError: !!configResponse?.error
     })
   } catch (error) {
     console.error('OpenCode status check failed:', error)

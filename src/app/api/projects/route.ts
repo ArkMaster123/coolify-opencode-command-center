@@ -8,12 +8,16 @@ export async function GET() {
     // Try to fetch real projects from embedded OpenCode server
     let projectList: unknown[] = []
     try {
-      const result = await client.project.list()
-      // Handle SDK response format - might be { data: Project[] } or Project[]
-      if (result && typeof result === 'object') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        projectList = Array.isArray(result) ? result : (result as any).data || []
-      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await client.project.list() as any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      projectList = Array.isArray(result?.response?.data) 
+        ? result.response.data 
+        : Array.isArray(result?.data) 
+          ? result.data 
+          : Array.isArray(result) 
+            ? result 
+            : []
       console.log('✅ Fetched real projects:', Array.isArray(projectList) ? projectList.length : 'invalid format')
     } catch (error) {
       console.log('⚠️ Projects API not available, using defaults:', (error as Error).message)

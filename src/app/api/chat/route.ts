@@ -8,34 +8,47 @@ let currentSession: any = null
 async function getSession(client: any) {
   if (!currentSession) {
     try {
-      // According to SDK docs: session.create() returns Session directly
-      // With responseStyle='data', we get Session directly (no wrapping)
-      const sessionData = await client.session.create({
+      // SDK with responseStyle='fields' returns { error?, request, response }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sessionResponse = await client.session.create({
         body: { title: 'AI Command Center Chat' }
-      })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
       
-      console.log('🔍 Session response keys:', sessionData ? Object.keys(sessionData).join(', ') : 'null')
-      console.log('🔍 Session ID:', sessionData?.id)
-      
-      if (sessionData?.id) {
-        currentSession = sessionData
-        console.log('✅ Chat session created:', currentSession.id)
-      } else {
-        // Fallback: try to use existing session
+      // Check for errors first
+      if (sessionResponse?.error) {
+        console.log('⚠️ Session creation error:', sessionResponse.error.name)
+        // Config errors shouldn't prevent session creation - try listing existing sessions
         try {
-          const sessionsResponse = await client.session.list()
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const sessions = Array.isArray(sessionsResponse) ? sessionsResponse : (sessionsResponse as any)?.data || []
+          const listResponse = await client.session.list() as any
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const sessions = Array.isArray(listResponse?.response?.data) 
+            ? listResponse.response.data 
+            : Array.isArray(listResponse?.data) 
+              ? listResponse.data 
+              : Array.isArray(listResponse) 
+                ? listResponse 
+                : []
           if (sessions.length > 0 && sessions[0]?.id) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            currentSession = sessions[0] as any
+            currentSession = sessions[0]
             console.log('✅ Using existing session:', currentSession.id)
           } else {
-            console.log('⚠️ No valid session found, using fallback')
-            currentSession = { id: 'fallback-session', fallback: true }
+            throw new Error('No sessions available')
           }
         } catch {
-          console.log('⚠️ Could not list sessions, using fallback')
+          console.log('⚠️ Could not get sessions, using fallback')
+          currentSession = { id: 'fallback-session', fallback: true }
+        }
+      } else {
+        // Extract session from response.data
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sessionData = sessionResponse?.response?.data || sessionResponse?.data || sessionResponse
+        if (sessionData?.id) {
+          currentSession = sessionData
+          console.log('✅ Chat session created:', currentSession.id)
+        } else {
+          console.log('⚠️ No session ID in response')
           currentSession = { id: 'fallback-session', fallback: true }
         }
       }
@@ -86,28 +99,34 @@ export async function POST(request: NextRequest) {
         
         console.log(`🤖 Using model: ${providerID}/${modelID}`)
         
-        // According to SDK docs: session.prompt() returns AssistantMessage (Message type)
-        // With responseStyle='data', we get AssistantMessage directly
-        // AssistantMessage has parts directly on it
-        const assistantMessage = await client.session.prompt({
+        // SDK returns { error?, request, response } format
+        const promptResponse = await client.session.prompt({
           path: { id: session.id },
           body: {
             model: { providerID, modelID },
             parts: [{ type: 'text', text: message }]
           }
-        })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        }) as any
         
-        // AssistantMessage (Message type) has parts directly
+        if (promptResponse?.error) {
+          throw new Error(`Prompt failed: ${promptResponse.error.name} - ${promptResponse.error.message || 'Unknown error'}`)
+        }
+        
+        // Extract AssistantMessage from response.data
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        result = { parts: (assistantMessage as any)?.parts || [] }
+        const assistantMessage = promptResponse?.response?.data || promptResponse?.data || promptResponse
+        
+        // AssistantMessage has parts directly
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        result = { parts: assistantMessage?.parts || [] }
         
         console.log('✅ Session prompt successful')
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const parts = (assistantMessage as any)?.parts || []
+        const parts = assistantMessage?.parts || []
         console.log('📝 Response:', { 
           hasParts: !!parts, 
-          partsCount: Array.isArray(parts) ? parts.length : 0,
-          messageKeys: assistantMessage ? Object.keys(assistantMessage).join(', ') : 'null'
+          partsCount: Array.isArray(parts) ? parts.length : 0
         })
       } else {
         // Fallback: try direct prompt or simulated response

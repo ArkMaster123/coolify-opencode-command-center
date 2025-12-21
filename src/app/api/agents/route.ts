@@ -8,15 +8,28 @@ export async function GET() {
     // Try to fetch real agents from embedded OpenCode server
     let agentList = []
     try {
-      agentList = await client.app.agents() || []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const agentsResponse = await client.app.agents() as any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      agentList = Array.isArray(agentsResponse?.response?.data) 
+        ? agentsResponse.response.data 
+        : Array.isArray(agentsResponse?.data) 
+          ? agentsResponse.data 
+          : Array.isArray(agentsResponse) 
+            ? agentsResponse 
+            : []
       console.log('✅ Fetched real agents:', agentList.length)
     } catch (error) {
       console.log('⚠️ Agents API not available, using defaults:', (error as Error).message)
     }
 
     // Get providers to show real models
-    const providers = await client.config.providers()
-    const realModels = Object.values(providers.data.default || {})
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const providersResponse = await client.config.providers() as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const providers = providersResponse?.response?.data || providersResponse?.data || providersResponse
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const realModels = Object.values(providers?.default || {})
     // Use OpenCode Zen FREE models as default!
     const allModels: string[] = [
       process.env.DEFAULT_MODEL || 'opencode/grok-code-fast-1',
