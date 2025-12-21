@@ -10,7 +10,7 @@ interface Project {
   name: string
   path: string
   status: 'active' | 'idle' | 'error'
-  lastModified: Date
+  lastModified: Date | string
   commits: number
   collaborators: number
   language: string
@@ -93,9 +93,15 @@ export function ProjectOverview() {
     }
   }
 
-  const formatLastModified = (date: Date) => {
+  const formatLastModified = (date: Date | string) => {
     const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
+    const dateObj = typeof date === 'string' ? new Date(date) : date
+
+    if (!dateObj || isNaN(dateObj.getTime())) {
+      return 'Unknown'
+    }
+
+    const diffMs = now.getTime() - dateObj.getTime()
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
     const diffDays = Math.floor(diffHours / 24)
 
