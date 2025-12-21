@@ -1,21 +1,4 @@
 {
-  "model": "opencode/grok-code-fast-1",
-  "agents": {
-    "code-assistant": {
-      "model": "opencode/grok-code-fast-1",
-      "role": "You are an expert coding assistant helping with software development tasks."
-    },
-    "debug-helper": {
-      "model": "opencode/big-pickle",
-      "role": "You are a debugging specialist helping identify and fix code issues."
-    },
-    "project-manager": {
-      "model": "opencode/gpt-5-nano",
-      "role": "You are a project management assistant helping with planning and organization."
-    }
-  },
-  "plugins": [],
-  "commands": {},
   "keybinds": {
     "leader": "ctrl+x",
     "app_exit": "ctrl+c,ctrl+d,<leader>q",
@@ -29,8 +12,6 @@
     "session_new": "<leader>n",
     "session_list": "<leader>l",
     "session_timeline": "<leader>g",
-    "session_fork": "none",
-    "session_rename": "none",
     "session_share": "none",
     "session_unshare": "none",
     "session_interrupt": "escape",
@@ -50,8 +31,6 @@
     "model_list": "<leader>m",
     "model_cycle_recent": "f2",
     "model_cycle_recent_reverse": "shift+f2",
-    "model_cycle_favorite": "none",
-    "model_cycle_favorite_reverse": "none",
     "command_list": "ctrl+p",
     "agent_list": "<leader>a",
     "agent_cycle": "tab",
@@ -97,7 +76,8 @@
     "history_next": "down",
     "session_child_cycle": "<leader>right",
     "session_child_cycle_reverse": "<leader>left",
-    "terminal_suspend": "ctrl+z",
-    "terminal_title_toggle": "none"
-  }
+    "terminal_suspend": "ctrl+z"
+  },
+  "model": "opencode/grok-code-fast-1",
+  "$schema": "https://opencode.ai/config.json"
 }

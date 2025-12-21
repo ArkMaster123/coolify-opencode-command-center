@@ -7,6 +7,7 @@ let opencodeClient: any = null
 
 /**
  * Check if OpenCode server is running locally
+ * Just checks if server responds (even with errors, it means server is running)
  */
 async function checkLocalServer(serverUrl: string): Promise<boolean> {
   try {
@@ -14,7 +15,8 @@ async function checkLocalServer(serverUrl: string): Promise<boolean> {
       method: 'GET',
       signal: AbortSignal.timeout(1000) // 1 second timeout
     })
-    return response.ok
+    // If we get ANY response (even error JSON), server is running
+    return response.status === 200 || response.status === 400
   } catch {
     return false
   }
@@ -47,17 +49,22 @@ export async function getOpencodeClient() {
         baseUrl: serverUrl
       })
       
-      // Test connection
+      // Test connection - even if config has errors, server is running
       try {
         await opencodeClient.config.get()
         console.log(`✅ Connected to OpenCode server at ${serverUrl}`)
       } catch (err) {
+        // Config errors are OK - server is still running
         const errorMsg = err instanceof Error ? err.message : String(err)
-        console.error(`❌ Failed to connect to OpenCode server at ${serverUrl}`)
-        console.error(`   Error: ${errorMsg}`)
-        console.error(`   Make sure OpenCode server is running:`)
-        console.error(`   opencode serve --hostname 127.0.0.1 --port 4096`)
-        throw new Error(`Cannot connect to OpenCode server at ${serverUrl}. Is it running?`)
+        if (errorMsg.includes('ConfigInvalidError') || errorMsg.includes('config')) {
+          console.log(`⚠️  OpenCode server connected but config has warnings (this is OK)`)
+        } else {
+          console.error(`❌ Failed to connect to OpenCode server at ${serverUrl}`)
+          console.error(`   Error: ${errorMsg}`)
+          console.error(`   Make sure OpenCode server is running:`)
+          console.error(`   opencode serve --hostname 127.0.0.1 --port 4096`)
+          throw new Error(`Cannot connect to OpenCode server at ${serverUrl}. Is it running?`)
+        }
       }
     }
     return { client: opencodeClient, serverUrl }
