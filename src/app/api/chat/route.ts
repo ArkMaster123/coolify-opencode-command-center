@@ -92,19 +92,22 @@ export async function POST(request: NextRequest) {
       if (hasValidSession) {
         // Use session-based prompt
         console.log('📤 Sending session-based prompt...')
-        // Use user-selected model or default to FREE grok-code-fast-1
-        const defaultModel = process.env.DEFAULT_MODEL || 'opencode/grok-code-fast-1'
+        // Use user-selected model or default to FREE grok-code (not grok-code-fast-1!)
+        const defaultModel = process.env.DEFAULT_MODEL || 'opencode/grok-code'
         const modelConfig = userModel || defaultModel
         const [providerID, modelID] = modelConfig.split('/')
         
-        console.log(`🤖 Using model: ${providerID}/${modelID}`)
+        // Fix model name: grok-code-fast-1 -> grok-code
+        const actualModelID = modelID === 'grok-code-fast-1' ? 'grok-code' : modelID
+        
+        console.log(`🤖 Using model: ${providerID}/${actualModelID}`)
         
         // SDK returns { error?, request, response } format
-        // API returns { info: AssistantMessage, parts: Part[] }
+        // Prompt is async - sends message and returns immediately
         const promptResponse = await client.session.prompt({
           path: { id: session.id },
           body: {
-            model: { providerID, modelID },
+            model: { providerID, modelID: actualModelID },
             parts: [{ type: 'text', text: message }]
           }
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,21 +117,39 @@ export async function POST(request: NextRequest) {
           throw new Error(`Prompt failed: ${promptResponse.error.name} - ${promptResponse.error.message || 'Unknown error'}`)
         }
         
-        // Extract response data - format is { info: AssistantMessage, parts: Part[] }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const responseData = promptResponse?.response?.data || promptResponse?.data || promptResponse
+        // Prompt is async - wait for AI response, then check messages
+        console.log('⏳ Waiting for AI response...')
+        await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
         
-        // API returns { info, parts } - parts is directly on the response object
+        // Poll for response (up to 8 seconds total)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const parts = responseData?.parts || []
+        let parts: any[] = []
+        for (let attempt = 0; attempt < 6; attempt++) {
+          const messagesResponse = await client.session.messages({ path: { id: session.id } })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const messages = (messagesResponse as any)?.response?.data || (messagesResponse as any)?.data || messagesResponse
+          
+          if (Array.isArray(messages)) {
+            // Find the assistant message (should be the last one)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const assistantMsg = messages.find((m: any) => m.info?.role === 'assistant' || m.info?.type === 'assistant')
+            if (assistantMsg?.parts && assistantMsg.parts.length > 0) {
+              parts = assistantMsg.parts
+              console.log(`✅ Got AI response after ${attempt + 1} attempts`)
+              break
+            }
+          }
+          
+          if (attempt < 5) {
+            await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 more second
+          }
+        }
         
         result = { parts }
         
-        console.log('✅ Session prompt successful')
         console.log('📝 Response:', { 
-          hasParts: !!parts, 
-          partsCount: Array.isArray(parts) ? parts.length : 0,
-          responseKeys: responseData ? Object.keys(responseData).join(', ') : 'null'
+          hasParts: parts.length > 0, 
+          partsCount: parts.length
         })
       } else {
         // Fallback: try direct prompt or simulated response
