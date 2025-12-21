@@ -133,6 +133,7 @@ export async function POST(request: NextRequest) {
           
           if (Array.isArray(messages)) {
             // Log all messages for debugging
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             messages.forEach((msg: any, idx: number) => {
               const role = msg.info?.role || msg.info?.type || 'unknown'
               const msgParts = msg.parts || []
@@ -147,10 +148,12 @@ export async function POST(request: NextRequest) {
             })
             
             if (assistantMsg) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const partsTypes = assistantMsg.parts?.map((p: any) => p.type).join(', ') || 'none'
               console.log('✅ Found assistant message:', {
                 hasParts: !!assistantMsg.parts,
                 partsCount: assistantMsg.parts?.length || 0,
-                partsTypes: assistantMsg.parts?.map((p: any) => p.type).join(', ') || 'none'
+                partsTypes
               })
             }
             
@@ -158,6 +161,7 @@ export async function POST(request: NextRequest) {
               parts = assistantMsg.parts
               console.log(`✅ Got AI response after ${attempt + 1} attempts`)
               // Log first part text for debugging
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const firstTextPart = parts.find((p: any) => p.type === 'text')
               if (firstTextPart?.text) {
                 console.log('📝 First part text:', firstTextPart.text.substring(0, 100))
@@ -173,10 +177,12 @@ export async function POST(request: NextRequest) {
         
         result = { parts }
         
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const partsPreview = parts.slice(0, 2).map((p: any) => ({ type: p.type, text: p.text?.substring(0, 50) }))
         console.log('📝 Final result:', { 
           hasParts: parts.length > 0, 
           partsCount: parts.length,
-          partsPreview: parts.slice(0, 2).map((p: any) => ({ type: p.type, text: p.text?.substring(0, 50) }))
+          partsPreview
         })
       } else {
         // Fallback: try direct prompt or simulated response
@@ -200,16 +206,35 @@ export async function POST(request: NextRequest) {
 
     // Extract text content from parts array
     const parts = result?.parts || []
-    const assistantContent = Array.isArray(parts)
-      ? parts
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .filter((part: any) => part && part.type === 'text')
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .map((part: any) => part.text || '')
-          .join('')
-      : 'I received your message but couldn\'t generate a response.'
+    let assistantContent = ''
     
-    console.log('📤 Extracted content length:', assistantContent.length)
+    if (Array.isArray(parts) && parts.length > 0) {
+      // First, try to get text from parts with type='text'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const textParts = parts.filter((part: any) => part && part.type === 'text' && part.text)
+      if (textParts.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        assistantContent = textParts.map((part: any) => part.text).join('')
+        console.log('✅ Extracted from text parts:', textParts.length)
+      } else {
+        // Fallback: look for any part with a text field
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const partsWithText = parts.filter((part: any) => part && part.text)
+        if (partsWithText.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          assistantContent = partsWithText.map((part: any) => part.text).join(' ')
+          console.log('✅ Extracted from parts with text field:', partsWithText.length)
+        } else {
+          assistantContent = 'I received your message but couldn\'t generate a response.'
+          console.log('⚠️ No text found in parts')
+        }
+      }
+    } else {
+      assistantContent = 'I received your message but couldn\'t generate a response.'
+      console.log('⚠️ No parts array found')
+    }
+    
+    console.log('📤 Extracted content:', assistantContent.substring(0, 100))
 
     return NextResponse.json({
       response: assistantContent,
