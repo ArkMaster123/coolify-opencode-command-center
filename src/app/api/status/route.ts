@@ -1,35 +1,47 @@
+import { createOpencode } from '@opencode-ai/sdk'
 import { NextResponse } from 'next/server'
+
+let opencodeInstance: any = null
+
+async function getOpencodeInstance() {
+  if (!opencodeInstance) {
+    try {
+      console.log('🚀 Starting embedded OpenCode server...')
+      opencodeInstance = await createOpencode({
+        hostname: '0.0.0.0',
+        port: 4097,
+        timeout: 15000,
+        config: {
+          model: process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
+        }
+      })
+      console.log(`✅ OpenCode server started at ${opencodeInstance.server.url}`)
+    } catch (error) {
+      console.error('❌ Failed to start OpenCode server:', error)
+      throw error
+    }
+  }
+  return opencodeInstance
+}
 
 export async function GET() {
   try {
-    const serverUrl = process.env.OPEN_CODE_SERVER_URL || 'http://142.132.171.59:4096'
+    const opencode = await getOpencodeInstance()
 
-    // Simple health check - just verify the URL is configured
-    const response = await fetch(`${serverUrl}/config`, {
-      method: 'GET',
-      signal: AbortSignal.timeout(5000) // 5 second timeout
+    // Test connection by fetching config
+    const config = await opencode.client.config.get()
+
+    return NextResponse.json({
+      connected: true,
+      serverUrl: opencode.server.url,
+      config: config.data,
+      status: 'embedded_running'
     })
-
-    if (response.ok) {
-      return NextResponse.json({
-        connected: true,
-        server: serverUrl,
-        status: 'healthy'
-      })
-    } else {
-      return NextResponse.json({
-        connected: false,
-        server: serverUrl,
-        status: 'server_error',
-        code: response.status
-      })
-    }
   } catch (error) {
-    console.error('OpenCode connection check failed:', error)
+    console.error('OpenCode status check failed:', error)
     return NextResponse.json({
       connected: false,
-      server: process.env.OPEN_CODE_SERVER_URL || 'http://142.132.171.59:4096',
-      status: 'connection_failed',
+      status: 'embedded_failed',
       error: error instanceof Error ? error.message : 'Unknown error'
     })
   }

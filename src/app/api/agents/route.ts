@@ -1,85 +1,74 @@
-import { createOpencodeClient } from '@opencode-ai/sdk'
+import { createOpencode } from '@opencode-ai/sdk'
 import { NextResponse } from 'next/server'
 
-let opencodeClient: any = null
+let opencodeInstance: any = null
 
-async function getClient() {
-  if (!opencodeClient) {
-    const serverUrl = process.env.OPEN_CODE_SERVER_URL || 'http://142.132.171.59:4096'
-    opencodeClient = createOpencodeClient({
-      baseUrl: serverUrl
-    })
+async function getOpencodeInstance() {
+  if (!opencodeInstance) {
+    try {
+      console.log('🚀 Starting embedded OpenCode server for agents...')
+      opencodeInstance = await createOpencode({
+        hostname: '0.0.0.0',
+        port: 4097,
+        timeout: 15000,
+        config: {
+          model: process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
+        }
+      })
+      console.log(`✅ OpenCode server started for agents at ${opencodeInstance.server.url}`)
+    } catch (error) {
+      console.error('❌ Failed to start OpenCode server for agents:', error)
+      throw error
+    }
   }
-  return opencodeClient
+  return opencodeInstance
 }
 
 export async function GET() {
   try {
-    const client = await getClient()
+    const opencode = await getOpencodeInstance()
+    const client = opencode.client
 
-    // Try to fetch available agents from OpenCode server
+    // Try to fetch real agents from embedded OpenCode server
     let agentList = []
     try {
       agentList = await client.app.agents() || []
+      console.log('✅ Fetched real agents:', agentList.length)
     } catch (error) {
-      console.log('Agents API not available, using defaults')
+      console.log('⚠️ Agents API not available, using defaults:', error.message)
     }
 
-    // If no real agents, use enhanced simulated data based on config
+    // Get providers to show real models
+    const providers = await client.config.providers()
+    const realModels = Object.values(providers.data.default || {})
+    const allModels = ['opencode/grok-code', 'opencode/big-pickle', 'opencode/gpt-5-nano', ...realModels]
+
+    // If no real agents, create agents based on available models
     if (!agentList || agentList.length === 0) {
-      // Get providers to show real models
-      const config = await client.config.get()
-      const providers = await client.config.providers()
-
-      const realModels = Object.values(providers.data.default || {})
-      const allModels = ['opencode/grok-code', 'opencode/big-pickle', 'opencode/gpt-5-nano']
-
-      const formattedAgents = [
-        {
-          id: 'agent-1',
-          name: 'Code Assistant',
-          model: realModels[0] || 'opencode/grok-code',
-          status: 'running' as const,
-          sessions: 3,
-          uptime: '2h 15m',
-          lastActivity: new Date(Date.now() - 5 * 60 * 1000),
-          memory: 256
-        },
-        {
-          id: 'agent-2',
-          name: 'Debug Helper',
-          model: realModels[1] || 'opencode/big-pickle',
-          status: 'running' as const,
-          sessions: 1,
-          uptime: '45m',
-          lastActivity: new Date(Date.now() - 2 * 60 * 1000),
-          memory: 128
-        },
-        {
-          id: 'agent-3',
-          name: 'Project Manager',
-          model: realModels[2] || 'opencode/gpt-5-nano',
-          status: 'paused' as const,
-          sessions: 0,
-          uptime: '1h 30m',
-          lastActivity: new Date(Date.now() - 15 * 60 * 1000),
-          memory: 64
-        }
-      ]
+      const formattedAgents = allModels.slice(0, 3).map((model: string, index: number) => ({
+        id: `agent-${index + 1}`,
+        name: ['Code Assistant', 'Debug Helper', 'Project Manager'][index] || `Agent ${index + 1}`,
+        model: model,
+        status: (index === 0 ? 'running' : index === 1 ? 'running' : 'paused') as 'running' | 'paused' | 'stopped',
+        sessions: index === 0 ? 3 : index === 1 ? 1 : 0,
+        uptime: index === 0 ? '2h 15m' : index === 1 ? '45m' : '1h 30m',
+        lastActivity: new Date(Date.now() - (index + 1) * 5 * 60 * 1000),
+        memory: 64 + (index * 64)
+      }))
 
       return NextResponse.json(formattedAgents)
     }
 
     // Convert real agents to our format
     const formattedAgents = agentList.slice(0, 3).map((agent: any, index: number) => ({
-      id: agent.id || `agent-${index}`,
+      id: agent.id || `agent-${index + 1}`,
       name: agent.name || ['Code Assistant', 'Debug Helper', 'Project Manager'][index] || `Agent ${index + 1}`,
-      model: agent.model || 'opencode/grok-code',
-      status: (index === 0 ? 'running' : index === 1 ? 'running' : 'paused') as 'running' | 'paused' | 'stopped',
-      sessions: agent.sessions || Math.floor(Math.random() * 5),
+      model: agent.model || allModels[index] || 'opencode/grok-code',
+      status: (agent.status === 'running' ? 'running' : index === 0 ? 'running' : 'paused') as 'running' | 'paused' | 'stopped',
+      sessions: agent.sessions || (index === 0 ? 3 : index === 1 ? 1 : 0),
       uptime: agent.uptime || `${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m`,
-      lastActivity: agent.lastActivity ? new Date(agent.lastActivity) : new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000),
-      memory: agent.memory || 64 + Math.floor(Math.random() * 256)
+      lastActivity: agent.lastActivity ? new Date(agent.lastActivity) : new Date(Date.now() - (index + 1) * 5 * 60 * 1000),
+      memory: agent.memory || 64 + (index * 64)
     }))
 
     return NextResponse.json(formattedAgents)
