@@ -104,7 +104,7 @@ export async function GET() {
         collaborators: projectData.collaborators as number || 1,
         language: projectData.language as string || 'TypeScript',
         size: projectData.size as string || `${(Math.random() * 20).toFixed(1)}MB`
-      }
+      };
     }))
 
     return NextResponse.json(formattedProjects)
