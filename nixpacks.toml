@@ -13,4 +13,4 @@ cmds = [
 ]
 
 [start]
-cmd = "NODE_ENV=production PORT=${PORT:-3000} next start --hostname 0.0.0.0"
+cmd = "NODE_ENV=production PORT=${PORT:-3000} node .next/standalone/server.js"
