@@ -20,9 +20,11 @@ In Coolify service settings, check:
 
 1. **Repository**: `https://github.com/ArkMaster123/coolify-opencode-command-center`
 2. **Branch**: `main`
-3. **Build Path**: **LEAVE EMPTY** (should be blank/empty)
-   - ❌ NOT: `ai-command-center`
-   - ✅ YES: (empty/blank)
+3. **Base Directory**: **MUST BE EMPTY** (should be blank/empty)
+   - ❌ WRONG: `/ai-command-center` ← This causes 404!
+   - ✅ CORRECT: (empty/blank) or `/`
+   
+**CRITICAL**: If "Base Directory" is set to `/ai-command-center`, **clear it** and save!
 
 ## 🔍 How to Verify
 
