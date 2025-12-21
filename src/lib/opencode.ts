@@ -98,7 +98,8 @@ export async function getOpencodeClient() {
     if (!opencodeClient) {
       console.log(`🔌 CLIENT MODE: Connecting to OpenCode server at ${serverUrl}...`)
       opencodeClient = createOpencodeClient({
-        baseUrl: serverUrl
+        baseUrl: serverUrl,
+        responseStyle: 'data' // Return data directly, not wrapped
       })
       
       // Test connection - even if config has errors, server is running
