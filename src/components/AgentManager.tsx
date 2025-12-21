@@ -13,11 +13,19 @@ interface Agent {
   status: 'running' | 'paused' | 'stopped' | 'error'
   sessions: number
   uptime: string
-  lastActivity: Date
+  lastActivity: Date | string
   memory: number
 }
 
 export function AgentManager() {
+  const formatLastActivity = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date
+    if (!dateObj || isNaN(dateObj.getTime())) {
+      return 'Unknown'
+    }
+    return dateObj.toLocaleTimeString()
+  }
+
   const [agents, setAgents] = useState<Agent[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -185,7 +193,7 @@ export function AgentManager() {
                 <div>
                   <span className="text-slate-400">Last Activity:</span>
                   <span className="text-white ml-2">
-                    {agent.lastActivity.toLocaleTimeString()}
+                    {formatLastActivity(agent.lastActivity)}
                   </span>
                 </div>
               </div>
