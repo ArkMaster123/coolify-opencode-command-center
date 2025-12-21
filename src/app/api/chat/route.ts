@@ -8,10 +8,46 @@ let currentSession: any = null
 async function getSession(client: any) {
   if (!currentSession) {
     try {
-      currentSession = await client.session.create({
+      const response = await client.session.create({
         body: { title: 'AI Command Center Chat' }
       })
-      console.log('✅ Chat session created:', currentSession?.id)
+      
+      // SDK might return { data: Session } or just Session
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sessionData = (response as any)?.data || response
+      
+      console.log('🔍 Session creation response type:', typeof sessionData)
+      console.log('🔍 Session data keys:', sessionData ? Object.keys(sessionData).join(', ') : 'null')
+      if (sessionData?.id) console.log('🔍 Session ID found:', sessionData.id)
+      
+      if (sessionData && sessionData.id) {
+        currentSession = sessionData
+        console.log('✅ Chat session created:', currentSession.id)
+      } else {
+        // Try to use first existing session as fallback
+        try {
+          const sessions = await client.session.list()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const sessionsList = Array.isArray(sessions) ? sessions : (sessions as any)?.data || []
+          if (sessionsList.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const firstSession = sessionsList[0] as any
+            if (firstSession.id) {
+              currentSession = firstSession
+              console.log('✅ Using existing session:', currentSession.id)
+            } else {
+              console.log('⚠️ Session created but no ID found, response:', response)
+              currentSession = { id: 'fallback-session', fallback: true }
+            }
+          } else {
+            console.log('⚠️ No sessions available, using fallback')
+            currentSession = { id: 'fallback-session', fallback: true }
+          }
+        } catch (listError) {
+          console.log('⚠️ Could not list sessions:', (listError as Error).message)
+          currentSession = { id: 'fallback-session', fallback: true }
+        }
+      }
     } catch (error) {
       console.log('⚠️ Session creation failed, using fallback mode:', (error as Error).message)
       currentSession = { id: 'fallback-session', fallback: true }
@@ -34,14 +70,22 @@ export async function POST(request: NextRequest) {
     let session
     try {
       session = await getSession(client)
-    } catch {
-      console.log('Session creation failed, using direct prompt')
+      console.log('📋 Session state:', { 
+        hasSession: !!session, 
+        sessionId: session?.id, 
+        isFallback: session?.fallback 
+      })
+    } catch (err) {
+      console.log('Session creation failed, using direct prompt:', (err as Error).message)
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let result: any
     try {
-      if (session && session.id && !session.fallback) {
+      // Check if we have a valid session with an ID
+      const hasValidSession = session && session.id && session.id !== 'fallback-session' && !session.fallback
+      
+      if (hasValidSession) {
         // Use session-based prompt
         console.log('📤 Sending session-based prompt...')
         // Use user-selected model or default to FREE grok-code-fast-1
@@ -51,14 +95,20 @@ export async function POST(request: NextRequest) {
         
         console.log(`🤖 Using model: ${providerID}/${modelID}`)
         
-        result = await client.session.prompt({
+        const promptResponse = await client.session.prompt({
           path: { id: session.id },
           body: {
             model: { providerID, modelID },
             parts: [{ type: 'text', text: message }]
           }
         })
-        console.log('✅ Session prompt successful')
+        
+        // SDK might return { data: Message } or just Message
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        result = (promptResponse as any)?.data || promptResponse
+        
+        console.log('✅ Session prompt successful, response type:', typeof result)
+        console.log('📝 Response has parts:', !!result?.parts)
       } else {
         // Fallback: try direct prompt or simulated response
         console.log('⚠️ Using fallback chat mode')
