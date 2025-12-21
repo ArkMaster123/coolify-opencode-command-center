@@ -19,7 +19,7 @@ interface Project {
 
 export function ProjectOverview() {
   const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
 
   // Fetch projects from API route
   useEffect(() => {

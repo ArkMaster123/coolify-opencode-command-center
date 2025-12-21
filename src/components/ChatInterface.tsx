@@ -46,7 +46,7 @@ export function ChatInterface() {
           body: JSON.stringify({ message: 'ping' })
         })
         setIsConnected(response.ok)
-      } catch (_error) {
+      } catch {
         setIsConnected(false)
       }
     }
@@ -98,8 +98,8 @@ export function ChatInterface() {
       if (data.sessionId && !sessionId) {
         setSessionId(data.sessionId)
       }
-    } catch (_error) {
-      console.error('Error sending message:', _error)
+    } catch (error) {
+      console.error('Error sending message:', error)
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',

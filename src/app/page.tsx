@@ -30,7 +30,7 @@ export default function CommandCenter() {
         const response = await fetch('/api/status')
         const data = await response.json()
         setOpencodeConnected(data.connected)
-      } catch (_error) {
+      } catch {
         setOpencodeConnected(false)
       }
     }

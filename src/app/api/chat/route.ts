@@ -1,26 +1,12 @@
 import { createOpencode } from '@opencode-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 
-interface OpencodeInstance {
-  server: { url: string }
-  client: {
-    session: {
-      create(body: { title: string }): Promise<{ id?: string }>
-      prompt(body: {
-        path: { id: string }
-        body: {
-          model: { providerID: string; modelID: string }
-          parts: Array<{ type: string; text: string }>
-        }
-      }): Promise<{ parts?: Array<{ type: string; text: string }> }>
-    }
-  }
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let opencodeInstance: any = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let currentSession: any = null
 
-let opencodeInstance: OpencodeInstance | null = null
-let currentSession: { id?: string; fallback?: boolean } | null = null
-
-async function getOpencodeInstance(): Promise<OpencodeInstance> {
+async function getOpencodeInstance() {
   if (!opencodeInstance) {
     try {
       console.log('🚀 Starting embedded OpenCode server for chat...')
@@ -31,7 +17,7 @@ async function getOpencodeInstance(): Promise<OpencodeInstance> {
         config: {
           model: process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
         }
-      }) as OpencodeInstance
+      })
       console.log(`✅ OpenCode server started for chat at ${opencodeInstance.server.url}`)
     } catch (error) {
       console.error('❌ Failed to start OpenCode server for chat:', error)
@@ -41,7 +27,8 @@ async function getOpencodeInstance(): Promise<OpencodeInstance> {
   return opencodeInstance
 }
 
-async function getSession(client: OpencodeInstance['client']): Promise<{ id?: string; fallback?: boolean }> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getSession(client: any) {
   if (!currentSession) {
     try {
       currentSession = await client.session.create({
@@ -71,11 +58,12 @@ export async function POST(request: NextRequest) {
     let session
     try {
       session = await getSession(client)
-    } catch (_sessionError) {
+    } catch {
       console.log('Session creation failed, using direct prompt')
     }
 
-    let result: { parts?: Array<{ type: string; text: string }> }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let result: any
     try {
       if (session && session.id && !session.fallback) {
         // Use session-based prompt
@@ -109,8 +97,10 @@ export async function POST(request: NextRequest) {
     }
 
     const assistantContent = result.parts
-      ?.filter((part: { type: string; text: string }) => part.type === 'text')
-      ?.map((part: { type: string; text: string }) => part.text)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ?.filter((part: any) => part.type === 'text')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ?.map((part: any) => part.text)
       ?.join('') || 'I received your message but couldn\'t generate a response.'
 
     return NextResponse.json({

@@ -1,22 +1,10 @@
 import { createOpencode } from '@opencode-ai/sdk'
 import { NextResponse } from 'next/server'
 
-interface OpencodeInstance {
-  server: { url: string }
-  client: {
-    app: {
-      agents(): Promise<unknown[]>
-    }
-    config: {
-      providers(): Promise<{ data: { default: Record<string, string> } }>
-      get(): Promise<{ data: unknown }>
-    }
-  }
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let opencodeInstance: any = null
 
-let opencodeInstance: OpencodeInstance | null = null
-
-async function getOpencodeInstance(): Promise<OpencodeInstance> {
+async function getOpencodeInstance() {
   if (!opencodeInstance) {
     try {
       console.log('🚀 Starting embedded OpenCode server for agents...')
@@ -27,7 +15,7 @@ async function getOpencodeInstance(): Promise<OpencodeInstance> {
         config: {
           model: process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
         }
-      }) as OpencodeInstance
+      })
       console.log(`✅ OpenCode server started for agents at ${opencodeInstance.server.url}`)
     } catch (error) {
       console.error('❌ Failed to start OpenCode server for agents:', error)
@@ -48,13 +36,13 @@ export async function GET() {
       agentList = await client.app.agents() || []
       console.log('✅ Fetched real agents:', agentList.length)
     } catch (error) {
-      console.log('⚠️ Agents API not available, using defaults:', error.message)
+      console.log('⚠️ Agents API not available, using defaults:', (error as Error).message)
     }
 
     // Get providers to show real models
     const providers = await client.config.providers()
     const realModels = Object.values(providers.data.default || {})
-    const allModels = ['opencode/grok-code', 'opencode/big-pickle', 'opencode/gpt-5-nano', ...realModels]
+    const allModels: string[] = ['opencode/grok-code', 'opencode/big-pickle', 'opencode/gpt-5-nano', ...(realModels as string[])]
 
     // If no real agents, create agents based on available models
     if (!agentList || agentList.length === 0) {

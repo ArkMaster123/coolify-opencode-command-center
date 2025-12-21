@@ -1,21 +1,10 @@
 import { createOpencode } from '@opencode-ai/sdk'
 import { NextResponse } from 'next/server'
 
-interface OpencodeInstance {
-  server: { url: string }
-  client: {
-    project: {
-      list(): Promise<unknown[]>
-    }
-    config: {
-      get(): Promise<{ data: unknown }>
-    }
-  }
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let opencodeInstance: any = null
 
-let opencodeInstance: OpencodeInstance | null = null
-
-async function getOpencodeInstance(): Promise<OpencodeInstance> {
+async function getOpencodeInstance() {
   if (!opencodeInstance) {
     try {
       console.log('🚀 Starting embedded OpenCode server for projects...')
@@ -26,7 +15,7 @@ async function getOpencodeInstance(): Promise<OpencodeInstance> {
         config: {
           model: process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
         }
-      }) as OpencodeInstance
+      })
       console.log(`✅ OpenCode server started for projects at ${opencodeInstance.server.url}`)
     } catch (error) {
       console.error('❌ Failed to start OpenCode server for projects:', error)
@@ -47,7 +36,7 @@ export async function GET() {
       projectList = await client.project.list() || []
       console.log('✅ Fetched real projects:', projectList.length)
     } catch (error) {
-      console.log('⚠️ Projects API not available, using defaults:', error.message)
+      console.log('⚠️ Projects API not available, using defaults:', (error as Error).message)
     }
 
     // If no real projects, use embedded-aware simulated data
@@ -105,7 +94,7 @@ export async function GET() {
         language: projectData.language as string || 'TypeScript',
         size: projectData.size as string || `${(Math.random() * 20).toFixed(1)}MB`
       };
-    }))
+    })
 
     return NextResponse.json(formattedProjects)
 
