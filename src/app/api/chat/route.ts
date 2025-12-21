@@ -129,13 +129,39 @@ export async function POST(request: NextRequest) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const messages = (messagesResponse as any)?.response?.data || (messagesResponse as any)?.data || messagesResponse
           
+          console.log(`🔍 Attempt ${attempt + 1}: Messages count:`, Array.isArray(messages) ? messages.length : 'not array')
+          
           if (Array.isArray(messages)) {
+            // Log all messages for debugging
+            messages.forEach((msg: any, idx: number) => {
+              const role = msg.info?.role || msg.info?.type || 'unknown'
+              const msgParts = msg.parts || []
+              console.log(`  Message ${idx}: role=${role}, parts=${msgParts.length}`)
+            })
+            
             // Find the assistant message (should be the last one)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const assistantMsg = messages.find((m: any) => m.info?.role === 'assistant' || m.info?.type === 'assistant')
+            const assistantMsg = messages.find((m: any) => {
+              const role = m.info?.role || m.info?.type
+              return role === 'assistant'
+            })
+            
+            if (assistantMsg) {
+              console.log('✅ Found assistant message:', {
+                hasParts: !!assistantMsg.parts,
+                partsCount: assistantMsg.parts?.length || 0,
+                partsTypes: assistantMsg.parts?.map((p: any) => p.type).join(', ') || 'none'
+              })
+            }
+            
             if (assistantMsg?.parts && assistantMsg.parts.length > 0) {
               parts = assistantMsg.parts
               console.log(`✅ Got AI response after ${attempt + 1} attempts`)
+              // Log first part text for debugging
+              const firstTextPart = parts.find((p: any) => p.type === 'text')
+              if (firstTextPart?.text) {
+                console.log('📝 First part text:', firstTextPart.text.substring(0, 100))
+              }
               break
             }
           }
@@ -147,9 +173,10 @@ export async function POST(request: NextRequest) {
         
         result = { parts }
         
-        console.log('📝 Response:', { 
+        console.log('📝 Final result:', { 
           hasParts: parts.length > 0, 
-          partsCount: parts.length
+          partsCount: parts.length,
+          partsPreview: parts.slice(0, 2).map((p: any) => ({ type: p.type, text: p.text?.substring(0, 50) }))
         })
       } else {
         // Fallback: try direct prompt or simulated response
