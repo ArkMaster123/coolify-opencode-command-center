@@ -140,12 +140,15 @@ export async function POST(request: NextRequest) {
               console.log(`  Message ${idx}: role=${role}, parts=${msgParts.length}`)
             })
             
-            // Find the assistant message (should be the last one)
+            // Find the LAST assistant message (most recent response)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const assistantMsg = messages.find((m: any) => {
+            const assistantMessages = messages.filter((m: any) => {
               const role = m.info?.role || m.info?.type
               return role === 'assistant'
             })
+            // Get the LAST assistant message (most recent)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const assistantMsg = assistantMessages.length > 0 ? assistantMessages[assistantMessages.length - 1] : null
             
             if (assistantMsg) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
