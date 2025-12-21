@@ -68,10 +68,14 @@ export async function POST(request: NextRequest) {
       if (session && session.id && !session.fallback) {
         // Use session-based prompt
         console.log('📤 Sending session-based prompt...')
+        // Use configured model or fallback to Anthropic Claude
+        const modelConfig = process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
+        const [providerID, modelID] = modelConfig.split('/')
+        
         result = await client.session.prompt({
           path: { id: session.id },
           body: {
-            model: { providerID: 'opencode', modelID: 'grok-code' },
+            model: { providerID, modelID },
             parts: [{ type: 'text', text: message }]
           }
         })

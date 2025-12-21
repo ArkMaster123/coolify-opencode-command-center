@@ -42,7 +42,13 @@ export async function GET() {
     // Get providers to show real models
     const providers = await client.config.providers()
     const realModels = Object.values(providers.data.default || {})
-    const allModels: string[] = ['opencode/grok-code', 'opencode/big-pickle', 'opencode/gpt-5-nano', ...(realModels as string[])]
+    // Use real model names from config, fallback to common models
+    const allModels: string[] = [
+      process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022',
+      'anthropic/claude-3-haiku-20240307',
+      'openai/gpt-4o-mini',
+      ...(realModels as string[])
+    ]
 
     // If no real agents, create agents based on available models
     if (!agentList || agentList.length === 0) {
