@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Loader2, ChevronDown } from 'lucide-react'
+import { Send, Bot, User, Loader2, ChevronDown, ChevronRight, Brain } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,8 @@ interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  reasoning?: string
+  hasReasoning?: boolean
   timestamp: Date | string
 }
 
@@ -59,7 +61,20 @@ export function ChatInterface() {
   const [sessionId, setSessionId] = useState<string>('')
   const [selectedModel, setSelectedModel] = useState('opencode/grok-code-fast-1')
   const [showModelDropdown, setShowModelDropdown] = useState(false)
+  const [expandedReasoning, setExpandedReasoning] = useState<Set<string>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  const toggleReasoning = (messageId: string) => {
+    setExpandedReasoning(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId)
+      } else {
+        newSet.add(messageId)
+      }
+      return newSet
+    })
+  }
 
   // Check connection status
   useEffect(() => {
@@ -115,6 +130,8 @@ export function ChatInterface() {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: data.response || 'I received your message but couldn\'t generate a response.',
+        reasoning: data.reasoning,
+        hasReasoning: data.hasReasoning || false,
         timestamp: new Date()
       }
 
@@ -199,7 +216,7 @@ export function ChatInterface() {
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col space-y-4">
-        {/* Messages */}
+        {/* Messages Stream */}
         <div className="flex-1 overflow-y-auto space-y-4 pr-2">
           {messages.map((message) => (
             <div
@@ -223,7 +240,34 @@ export function ChatInterface() {
                     : 'bg-slate-700 text-slate-200'
                 }`}
               >
-                <p className="text-sm">{message.content}</p>
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                
+                {/* Reasoning Dropdown */}
+                {message.role === 'assistant' && message.hasReasoning && message.reasoning && (
+                  <div className="mt-2 pt-2 border-t border-slate-600">
+                    <button
+                      onClick={() => toggleReasoning(message.id)}
+                      className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-300 transition-colors w-full"
+                    >
+                      {expandedReasoning.has(message.id) ? (
+                        <ChevronDown className="h-3 w-3" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3" />
+                      )}
+                      <Brain className="h-3 w-3" />
+                      <span>Reasoning</span>
+                      <span className="ml-auto text-slate-500">
+                        {expandedReasoning.has(message.id) ? 'Hide' : 'Show'}
+                      </span>
+                    </button>
+                    {expandedReasoning.has(message.id) && (
+                      <div className="mt-2 p-2 bg-slate-800/50 rounded text-xs text-slate-300 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                        {message.reasoning}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 <p className="text-xs opacity-70 mt-1">
                   {formatTimestamp(message.timestamp)}
                 </p>

@@ -207,11 +207,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Extract text content from parts array
+    // Extract text content and reasoning from parts array
     const parts = result?.parts || []
     let assistantContent = ''
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let reasoningParts: any[] = []
     
     if (Array.isArray(parts) && parts.length > 0) {
+      // Extract reasoning parts (type='reasoning')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      reasoningParts = parts.filter((part: any) => part && part.type === 'reasoning' && part.text)
+      
       // First, try to get text from parts with type='text'
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const textParts = parts.filter((part: any) => part && part.type === 'text' && part.text)
@@ -220,9 +226,9 @@ export async function POST(request: NextRequest) {
         assistantContent = textParts.map((part: any) => part.text).join('')
         console.log('✅ Extracted from text parts:', textParts.length)
       } else {
-        // Fallback: look for any part with a text field
+        // Fallback: look for any part with a text field (excluding reasoning)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const partsWithText = parts.filter((part: any) => part && part.text)
+        const partsWithText = parts.filter((part: any) => part && part.text && part.type !== 'reasoning')
         if (partsWithText.length > 0) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           assistantContent = partsWithText.map((part: any) => part.text).join(' ')
@@ -238,9 +244,15 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('📤 Extracted content:', assistantContent.substring(0, 100))
+    console.log('🧠 Reasoning parts:', reasoningParts.length)
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const reasoningText = reasoningParts.map((p: any) => p.text).join('\n\n')
+    
     return NextResponse.json({
       response: assistantContent,
+      reasoning: reasoningText,
+      hasReasoning: reasoningParts.length > 0,
       sessionId: session?.id || 'opencode-session',
       serverUrl,
       mode: session?.fallback ? 'fallback' : 'session'
