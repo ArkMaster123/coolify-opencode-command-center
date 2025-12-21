@@ -1,11 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactCompiler: true,
-  output: 'standalone',
-  experimental: {
-    serverComponentsExternalPackages: [],
-  },
+  // Temporarily disable reactCompiler for compatibility
+  // reactCompiler: true,
 };
 
 export default nextConfig;
