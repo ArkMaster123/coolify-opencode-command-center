@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOpencodeClient } from '@/lib/opencode'
+import { getOpencodeClient, getOpencodeMode } from '@/lib/opencode'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let currentSession: any = null
@@ -94,11 +94,22 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Chat API error:', error)
+    const mode = getOpencodeMode()
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    console.error(`❌ Chat API error (${mode} mode):`, errorMsg)
+    
+    let userMessage = '❌ Error communicating with OpenCode server.'
+    if (mode === 'client') {
+      userMessage = '❌ Error connecting to local OpenCode server. Make sure it\'s running:\n`opencode serve --hostname 127.0.0.1 --port 4096`'
+    } else {
+      userMessage = '❌ Error with embedded OpenCode server. The server may still be starting up.'
+    }
+    
     return NextResponse.json({
-      error: 'Failed to communicate with embedded OpenCode server',
-      response: '❌ Error with embedded OpenCode server. The server may still be starting up.',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: `Failed to communicate with OpenCode server (${mode} mode)`,
+      response: userMessage,
+      mode,
+      details: errorMsg
     }, { status: 500 })
   }
 }

@@ -4,22 +4,34 @@ import { createOpencode, createOpencodeClient } from '@opencode-ai/sdk'
 let opencodeInstance: any = null
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let opencodeClient: any = null
+let detectedMode: 'client' | 'embedded' | null = null
 
 /**
  * Check if OpenCode server is running locally
- * Just checks if server responds (even with errors, it means server is running)
+ * Tries multiple endpoints to be sure
  */
 async function checkLocalServer(serverUrl: string): Promise<boolean> {
-  try {
-    const response = await fetch(`${serverUrl}/config`, {
-      method: 'GET',
-      signal: AbortSignal.timeout(1000) // 1 second timeout
-    })
-    // If we get ANY response (even error JSON), server is running
-    return response.status === 200 || response.status === 400
-  } catch {
-    return false
+  // Try multiple endpoints - if ANY respond, server is running
+  const endpoints = ['/config', '/doc', '/project']
+  
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(`${serverUrl}${endpoint}`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(500) // 500ms timeout
+      })
+      // Any HTTP response means server is running (even errors)
+      if (response.status >= 200 && response.status < 500) {
+        console.log(`✅ OpenCode server detected at ${serverUrl}${endpoint} (status: ${response.status})`)
+        return true
+      }
+    } catch (err) {
+      // Continue to next endpoint
+      continue
+    }
   }
+  
+  return false
 }
 
 /**
@@ -33,12 +45,23 @@ export async function getOpencodeClient() {
   const explicitMode = process.env.OPENCODE_MODE
   const serverUrl = process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1:4096'
   
-  // Auto-detect: If no explicit mode, check if local server is running
+  // ALWAYS check for local server first (unless explicitly set to embedded)
   let mode = explicitMode
-  if (!mode) {
+  if (!mode || mode !== 'embedded') {
+    console.log(`🔍 Checking for local OpenCode server at ${serverUrl}...`)
     const localServerRunning = await checkLocalServer(serverUrl)
-    mode = localServerRunning ? 'client' : 'embedded'
-    console.log(`🔍 Auto-detected mode: ${mode} (local server ${localServerRunning ? 'found' : 'not found'})`)
+    if (localServerRunning) {
+      mode = 'client'
+      detectedMode = 'client'
+      console.log(`✅ Local server found - using CLIENT mode`)
+    } else {
+      mode = mode || 'embedded'
+      detectedMode = mode as 'client' | 'embedded'
+      console.log(`⚠️  No local server found - using ${mode.toUpperCase()} mode`)
+    }
+  } else {
+    detectedMode = 'embedded'
+    console.log(`📌 Using explicit mode: ${mode.toUpperCase()}`)
   }
 
   if (mode === 'client') {
@@ -86,13 +109,26 @@ export async function getOpencodeClient() {
       } catch (err) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const errorMessage = (err as any)?.message || String(err)
+        
+        // If embedded fails, try falling back to client mode
         if (errorMessage.includes('EADDRINUSE') || errorMessage.includes('port')) {
           console.error('❌ Port conflict! Embedded server cannot start.')
-          console.error(`   Port ${process.env.OPENCODE_PORT || '4097'} is already in use.`)
-          console.error('   Solutions:')
-          console.error('   1. Use CLIENT mode: OPENCODE_MODE=client npm run dev')
-          console.error('   2. Start local server: opencode serve --hostname 127.0.0.1 --port 4096')
-          console.error('   3. Use different port: OPENCODE_PORT=4098 npm run dev')
+          console.log('🔄 Falling back to CLIENT mode...')
+          
+          // Try client mode as fallback
+          const localServerRunning = await checkLocalServer(serverUrl)
+          if (localServerRunning) {
+            console.log('✅ Found local OpenCode server - switching to CLIENT mode')
+            // Recursively call with client mode
+            process.env.OPENCODE_MODE = 'client'
+            return getOpencodeClient()
+          } else {
+            console.error(`   Port ${process.env.OPENCODE_PORT || '4097'} is already in use.`)
+            console.error('   Solutions:')
+            console.error('   1. Use CLIENT mode: OPENCODE_MODE=client npm run dev')
+            console.error('   2. Start local server: opencode serve --hostname 127.0.0.1 --port 4096')
+            console.error('   3. Use different port: OPENCODE_PORT=4098 npm run dev')
+          }
         }
         throw err
       }
@@ -105,6 +141,10 @@ export async function getOpencodeClient() {
  * Get the current OpenCode mode
  */
 export function getOpencodeMode(): 'client' | 'embedded' {
+  // Return detected mode if available, otherwise check env or default
+  if (detectedMode) {
+    return detectedMode
+  }
   return (process.env.OPENCODE_MODE || 'embedded') as 'client' | 'embedded'
 }
 
