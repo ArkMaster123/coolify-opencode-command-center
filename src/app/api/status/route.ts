@@ -1,9 +1,18 @@
 import { createOpencode } from '@opencode-ai/sdk'
 import { NextResponse } from 'next/server'
 
-let opencodeInstance: any = null
+interface OpencodeInstance {
+  server: { url: string }
+  client: {
+    config: {
+      get(): Promise<{ data: unknown }>
+    }
+  }
+}
 
-async function getOpencodeInstance() {
+let opencodeInstance: OpencodeInstance | null = null
+
+async function getOpencodeInstance(): Promise<OpencodeInstance> {
   if (!opencodeInstance) {
     try {
       console.log('🚀 Starting embedded OpenCode server...')
@@ -14,7 +23,7 @@ async function getOpencodeInstance() {
         config: {
           model: process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
         }
-      })
+      }) as OpencodeInstance
       console.log(`✅ OpenCode server started at ${opencodeInstance.server.url}`)
     } catch (error) {
       console.error('❌ Failed to start OpenCode server:', error)

@@ -19,7 +19,6 @@ interface Project {
 
 export function ProjectOverview() {
   const [projects, setProjects] = useState<Project[]>([])
-  const [opencodeClient, setOpencodeClient] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   // Fetch projects from API route

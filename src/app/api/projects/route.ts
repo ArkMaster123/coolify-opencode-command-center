@@ -1,9 +1,21 @@
 import { createOpencode } from '@opencode-ai/sdk'
 import { NextResponse } from 'next/server'
 
-let opencodeInstance: any = null
+interface OpencodeInstance {
+  server: { url: string }
+  client: {
+    project: {
+      list(): Promise<unknown[]>
+    }
+    config: {
+      get(): Promise<{ data: unknown }>
+    }
+  }
+}
 
-async function getOpencodeInstance() {
+let opencodeInstance: OpencodeInstance | null = null
+
+async function getOpencodeInstance(): Promise<OpencodeInstance> {
   if (!opencodeInstance) {
     try {
       console.log('🚀 Starting embedded OpenCode server for projects...')
@@ -14,7 +26,7 @@ async function getOpencodeInstance() {
         config: {
           model: process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
         }
-      })
+      }) as OpencodeInstance
       console.log(`✅ OpenCode server started for projects at ${opencodeInstance.server.url}`)
     } catch (error) {
       console.error('❌ Failed to start OpenCode server for projects:', error)
@@ -80,16 +92,19 @@ export async function GET() {
     }
 
     // Convert real projects to our format
-    const formattedProjects = projectList.slice(0, 3).map((project: any, index: number) => ({
-      id: project.id || `project-${index + 1}`,
-      name: project.name || ['Embedded AI Command Center', 'OpenCode Integration', 'AI Agent System'][index] || `Project ${index + 1}`,
-      path: project.path || `/app/project-${index + 1}`,
-      status: (project.status === 'active' ? 'active' : index === 0 ? 'active' : 'idle') as 'active' | 'idle',
-      lastModified: project.lastModified ? new Date(project.lastModified) : new Date(Date.now() - (index + 1) * 60 * 60 * 1000),
-      commits: project.commits || Math.floor(Math.random() * 50) + 5,
-      collaborators: project.collaborators || 1,
-      language: project.language || 'TypeScript',
-      size: project.size || `${(Math.random() * 20).toFixed(1)}MB`
+    const formattedProjects = projectList.slice(0, 3).map((project: unknown, index: number) => {
+      const projectData = project as Record<string, unknown>
+      return {
+        id: projectData.id as string || `project-${index + 1}`,
+        name: projectData.name as string || ['Embedded AI Command Center', 'OpenCode Integration', 'AI Agent System'][index] || `Project ${index + 1}`,
+        path: projectData.path as string || `/app/project-${index + 1}`,
+        status: (projectData.status === 'active' ? 'active' : index === 0 ? 'active' : 'idle') as 'active' | 'idle',
+        lastModified: projectData.lastModified ? new Date(projectData.lastModified as string) : new Date(Date.now() - (index + 1) * 60 * 60 * 1000),
+        commits: projectData.commits as number || Math.floor(Math.random() * 50) + 5,
+        collaborators: projectData.collaborators as number || 1,
+        language: projectData.language as string || 'TypeScript',
+        size: projectData.size as string || `${(Math.random() * 20).toFixed(1)}MB`
+      }
     }))
 
     return NextResponse.json(formattedProjects)

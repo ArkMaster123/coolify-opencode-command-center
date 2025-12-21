@@ -27,7 +27,6 @@ export function AgentManager() {
   }
 
   const [agents, setAgents] = useState<Agent[]>([])
-  const [loading, setLoading] = useState(true)
 
   // Fetch agents from API route
   useEffect(() => {

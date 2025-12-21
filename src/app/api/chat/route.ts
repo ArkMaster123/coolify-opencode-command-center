@@ -1,10 +1,26 @@
 import { createOpencode } from '@opencode-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 
-let opencodeInstance: any = null
-let currentSession: any = null
+interface OpencodeInstance {
+  server: { url: string }
+  client: {
+    session: {
+      create(body: { title: string }): Promise<{ id?: string }>
+      prompt(body: {
+        path: { id: string }
+        body: {
+          model: { providerID: string; modelID: string }
+          parts: Array<{ type: string; text: string }>
+        }
+      }): Promise<{ parts?: Array<{ type: string; text: string }> }>
+    }
+  }
+}
 
-async function getOpencodeInstance() {
+let opencodeInstance: OpencodeInstance | null = null
+let currentSession: { id?: string; fallback?: boolean } | null = null
+
+async function getOpencodeInstance(): Promise<OpencodeInstance> {
   if (!opencodeInstance) {
     try {
       console.log('🚀 Starting embedded OpenCode server for chat...')
@@ -15,7 +31,7 @@ async function getOpencodeInstance() {
         config: {
           model: process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
         }
-      })
+      }) as OpencodeInstance
       console.log(`✅ OpenCode server started for chat at ${opencodeInstance.server.url}`)
     } catch (error) {
       console.error('❌ Failed to start OpenCode server for chat:', error)
@@ -25,7 +41,7 @@ async function getOpencodeInstance() {
   return opencodeInstance
 }
 
-async function getSession(client: any) {
+async function getSession(client: OpencodeInstance['client']): Promise<{ id?: string; fallback?: boolean }> {
   if (!currentSession) {
     try {
       currentSession = await client.session.create({
@@ -33,7 +49,7 @@ async function getSession(client: any) {
       })
       console.log('✅ Chat session created:', currentSession?.id)
     } catch (error) {
-      console.log('⚠️ Session creation failed, using fallback mode:', error.message)
+      console.log('⚠️ Session creation failed, using fallback mode:', (error as Error).message)
       currentSession = { id: 'fallback-session', fallback: true }
     }
   }
@@ -55,11 +71,11 @@ export async function POST(request: NextRequest) {
     let session
     try {
       session = await getSession(client)
-    } catch (sessionError) {
+    } catch (_sessionError) {
       console.log('Session creation failed, using direct prompt')
     }
 
-    let result
+    let result: { parts?: Array<{ type: string; text: string }> }
     try {
       if (session && session.id && !session.fallback) {
         // Use session-based prompt
@@ -93,8 +109,8 @@ export async function POST(request: NextRequest) {
     }
 
     const assistantContent = result.parts
-      ?.filter((part: any) => part.type === 'text')
-      ?.map((part: any) => part.text)
+      ?.filter((part: { type: string; text: string }) => part.type === 'text')
+      ?.map((part: { type: string; text: string }) => part.text)
       ?.join('') || 'I received your message but couldn\'t generate a response.'
 
     return NextResponse.json({

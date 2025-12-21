@@ -1,9 +1,22 @@
 import { createOpencode } from '@opencode-ai/sdk'
 import { NextResponse } from 'next/server'
 
-let opencodeInstance: any = null
+interface OpencodeInstance {
+  server: { url: string }
+  client: {
+    app: {
+      agents(): Promise<unknown[]>
+    }
+    config: {
+      providers(): Promise<{ data: { default: Record<string, string> } }>
+      get(): Promise<{ data: unknown }>
+    }
+  }
+}
 
-async function getOpencodeInstance() {
+let opencodeInstance: OpencodeInstance | null = null
+
+async function getOpencodeInstance(): Promise<OpencodeInstance> {
   if (!opencodeInstance) {
     try {
       console.log('🚀 Starting embedded OpenCode server for agents...')
@@ -14,7 +27,7 @@ async function getOpencodeInstance() {
         config: {
           model: process.env.DEFAULT_MODEL || 'anthropic/claude-3-5-sonnet-20241022'
         }
-      })
+      }) as OpencodeInstance
       console.log(`✅ OpenCode server started for agents at ${opencodeInstance.server.url}`)
     } catch (error) {
       console.error('❌ Failed to start OpenCode server for agents:', error)
@@ -60,16 +73,19 @@ export async function GET() {
     }
 
     // Convert real agents to our format
-    const formattedAgents = agentList.slice(0, 3).map((agent: any, index: number) => ({
-      id: agent.id || `agent-${index + 1}`,
-      name: agent.name || ['Code Assistant', 'Debug Helper', 'Project Manager'][index] || `Agent ${index + 1}`,
-      model: agent.model || allModels[index] || 'opencode/grok-code',
-      status: (agent.status === 'running' ? 'running' : index === 0 ? 'running' : 'paused') as 'running' | 'paused' | 'stopped',
-      sessions: agent.sessions || (index === 0 ? 3 : index === 1 ? 1 : 0),
-      uptime: agent.uptime || `${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m`,
-      lastActivity: agent.lastActivity ? new Date(agent.lastActivity) : new Date(Date.now() - (index + 1) * 5 * 60 * 1000),
-      memory: agent.memory || 64 + (index * 64)
-    }))
+    const formattedAgents = agentList.slice(0, 3).map((agent: unknown, index: number) => {
+      const agentData = agent as Record<string, unknown>
+      return {
+        id: agentData.id as string || `agent-${index + 1}`,
+        name: agentData.name as string || ['Code Assistant', 'Debug Helper', 'Project Manager'][index] || `Agent ${index + 1}`,
+        model: agentData.model as string || allModels[index] || 'opencode/grok-code',
+        status: (agentData.status === 'running' ? 'running' : index === 0 ? 'running' : 'paused') as 'running' | 'paused' | 'stopped',
+        sessions: agentData.sessions as number || (index === 0 ? 3 : index === 1 ? 1 : 0),
+        uptime: agentData.uptime as string || `${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m`,
+        lastActivity: agentData.lastActivity ? new Date(agentData.lastActivity as string) : new Date(Date.now() - (index + 1) * 5 * 60 * 1000),
+        memory: agentData.memory as number || 64 + (index * 64)
+      }
+    })
 
     return NextResponse.json(formattedAgents)
 
