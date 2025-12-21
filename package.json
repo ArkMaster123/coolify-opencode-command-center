@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:local": "OPENCODE_MODE=client OPENCODE_SERVER_URL=http://127.0.0.1:4096 next dev",
     "build": "next build",
-    "start": "next start --port ${PORT:-3000} --hostname 0.0.0.0",
+    "start": "next start --hostname 0.0.0.0 --port ${PORT:-3000}",
     "lint": "next lint"
   },
   "dependencies": {
