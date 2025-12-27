@@ -3,10 +3,25 @@ import { getOpencodeClient, getOpencodeMode } from '@/lib/opencode'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let currentSession: any = null
+let sessionCreatedAt: number = 0
+const SESSION_MAX_AGE_MS = 5 * 60 * 1000 // 5 minutes
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getSession(client: any) {
+  // Reuse session if still fresh
+  const sessionAge = Date.now() - sessionCreatedAt
+  if (currentSession && !currentSession.fallback && sessionAge < SESSION_MAX_AGE_MS) {
+    return currentSession
+  }
+  
+  // Reset if session is stale
+  if (sessionAge >= SESSION_MAX_AGE_MS) {
+    console.log('🔄 Session expired, creating new one...')
+    currentSession = null
+  }
+  
   if (!currentSession) {
+    sessionCreatedAt = Date.now()
     try {
       // SDK with responseStyle='fields' returns { error?, request, response }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,7 +77,7 @@ async function getSession(client: any) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, model: userModel } = await request.json()
+    const { message, model: userModel, agent: userAgent } = await request.json()
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
@@ -92,22 +107,20 @@ export async function POST(request: NextRequest) {
       if (hasValidSession) {
         // Use session-based prompt
         console.log('📤 Sending session-based prompt...')
-        // Use user-selected model or default to FREE grok-code (not grok-code-fast-1!)
         const defaultModel = process.env.DEFAULT_MODEL || 'opencode/grok-code'
         const modelConfig = userModel || defaultModel
         const [providerID, modelID] = modelConfig.split('/')
         
-        // Fix model name: grok-code-fast-1 -> grok-code
-        const actualModelID = modelID === 'grok-code-fast-1' ? 'grok-code' : modelID
-        
-        console.log(`🤖 Using model: ${providerID}/${actualModelID}`)
+        const selectedAgent = userAgent || 'build'
+        console.log(`🤖 Using model: ${providerID}/${modelID}, agent: ${selectedAgent}`)
         
         // SDK returns { error?, request, response } format
         // Prompt is async - sends message and returns immediately
         const promptResponse = await client.session.prompt({
           path: { id: session.id },
           body: {
-            model: { providerID, modelID: actualModelID },
+            model: { providerID, modelID },
+            agent: selectedAgent,
             parts: [{ type: 'text', text: message }]
           }
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -117,65 +130,50 @@ export async function POST(request: NextRequest) {
           throw new Error(`Prompt failed: ${promptResponse.error.name} - ${promptResponse.error.message || 'Unknown error'}`)
         }
         
-        // Prompt is async - wait for AI response, then check messages
+        // Poll for response - shorter initial wait, faster polling
         console.log('⏳ Waiting for AI response...')
-        await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
+        await new Promise(resolve => setTimeout(resolve, 500)) // 500ms initial wait
         
-        // Poll for response (up to 8 seconds total)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let parts: any[] = []
-        for (let attempt = 0; attempt < 6; attempt++) {
+        const startTime = Date.now()
+        const maxWaitMs = 30000 // 30 second max wait
+        let attempt = 0
+        
+        while (Date.now() - startTime < maxWaitMs) {
+          attempt++
           const messagesResponse = await client.session.messages({ path: { id: session.id } })
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const messages = (messagesResponse as any)?.response?.data || (messagesResponse as any)?.data || messagesResponse
           
-          console.log(`🔍 Attempt ${attempt + 1}: Messages count:`, Array.isArray(messages) ? messages.length : 'not array')
-          
           if (Array.isArray(messages)) {
-            // Log all messages for debugging
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            messages.forEach((msg: any, idx: number) => {
-              const role = msg.info?.role || msg.info?.type || 'unknown'
-              const msgParts = msg.parts || []
-              console.log(`  Message ${idx}: role=${role}, parts=${msgParts.length}`)
-            })
-            
             // Find the LAST assistant message (most recent response)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const assistantMessages = messages.filter((m: any) => {
               const role = m.info?.role || m.info?.type
               return role === 'assistant'
             })
-            // Get the LAST assistant message (most recent)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const assistantMsg = assistantMessages.length > 0 ? assistantMessages[assistantMessages.length - 1] : null
             
-            if (assistantMsg) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const partsTypes = assistantMsg.parts?.map((p: any) => p.type).join(', ') || 'none'
-              console.log('✅ Found assistant message:', {
-                hasParts: !!assistantMsg.parts,
-                partsCount: assistantMsg.parts?.length || 0,
-                partsTypes
-              })
-            }
-            
             if (assistantMsg?.parts && assistantMsg.parts.length > 0) {
-              parts = assistantMsg.parts
-              console.log(`✅ Got AI response after ${attempt + 1} attempts`)
-              // Log first part text for debugging
+              // Check if response has actual text content (not just empty)
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const firstTextPart = parts.find((p: any) => p.type === 'text')
-              if (firstTextPart?.text) {
-                console.log('📝 First part text:', firstTextPart.text.substring(0, 100))
+              const hasText = assistantMsg.parts.some((p: any) => p.type === 'text' && p.text?.length > 0)
+              if (hasText) {
+                parts = assistantMsg.parts
+                console.log(`✅ Got AI response after ${attempt} polls (${Date.now() - startTime}ms)`)
+                break
               }
-              break
             }
           }
           
-          if (attempt < 5) {
-            await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 more second
-          }
+          // Exponential backoff: 300ms, 400ms, 500ms... up to 1000ms
+          const delay = Math.min(300 + (attempt * 100), 1000)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+        
+        if (parts.length === 0) {
+          console.log(`⚠️ Timeout after ${Date.now() - startTime}ms`)
         }
         
         result = { parts }

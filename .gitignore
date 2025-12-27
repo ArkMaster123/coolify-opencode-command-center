@@ -44,3 +44,5 @@ next-env.d.ts
 VPS_ACCESS.md
 vps-access.md
 *.vps.md
+SERVER_SETUP.md
+EMERGENCY_RECOVERY.md

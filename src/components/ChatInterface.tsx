@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Loader2, ChevronDown, ChevronRight, Brain } from 'lucide-react'
+import { Send, Bot, User, Loader2, ChevronDown, ChevronRight, Brain, Terminal, HardDrive, Container, FolderTree, Activity } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +38,13 @@ const AVAILABLE_MODELS = [
   { id: 'google/gemini-pro', name: 'Gemini Pro', provider: 'Google', free: false },
 ]
 
+// Available agents
+const AVAILABLE_AGENTS = [
+  { id: 'build', name: '🔨 Build', description: 'Full access - edit files, run commands', canEdit: true },
+  { id: 'plan', name: '📋 Plan', description: 'Read-only - analyze and plan without changes', canEdit: false },
+  { id: 'explore', name: '🔍 Explore', description: 'Fast file search and codebase exploration', canEdit: false },
+]
+
 export function ChatInterface() {
   const formatTimestamp = (timestamp: Date | string) => {
     const dateObj = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
@@ -60,7 +67,9 @@ export function ChatInterface() {
   const [isConnected, setIsConnected] = useState(false)
   const [sessionId, setSessionId] = useState<string>('')
   const [selectedModel, setSelectedModel] = useState('opencode/grok-code-fast-1')
+  const [selectedAgent, setSelectedAgent] = useState('build')
   const [showModelDropdown, setShowModelDropdown] = useState(false)
+  const [showAgentDropdown, setShowAgentDropdown] = useState(false)
   const [expandedReasoning, setExpandedReasoning] = useState<Set<string>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
@@ -117,11 +126,11 @@ export function ChatInterface() {
     setIsLoading(true)
 
     try {
-      // Send message via API route with selected model
+      // Send message via API route with selected model and agent
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input, model: selectedModel })
+        body: JSON.stringify({ message: input, model: selectedModel, agent: selectedAgent })
       })
 
       const data = await response.json()
@@ -173,44 +182,86 @@ export function ChatInterface() {
             </Badge>
           </CardTitle>
           
-          {/* Model Selector */}
-          <div className="relative">
-            <Button
-              variant="outline"
-              size="sm"
-              className="bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-600 min-w-[180px] justify-between"
-              onClick={() => setShowModelDropdown(!showModelDropdown)}
-            >
-              <span className="truncate">
-                {AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || 'Select Model'}
-              </span>
-              <ChevronDown className="h-4 w-4 ml-2" />
-            </Button>
-            
-            {showModelDropdown && (
-              <div className="absolute right-0 mt-1 w-72 bg-slate-800 border border-slate-600 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
-                {AVAILABLE_MODELS.map((model) => (
-                  <button
-                    key={model.id}
-                    className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-700 first:rounded-t-lg last:rounded-b-lg ${
-                      selectedModel === model.id ? 'bg-slate-700 text-blue-400' : 'text-slate-300'
-                    }`}
-                    onClick={() => {
-                      setSelectedModel(model.id)
-                      setShowModelDropdown(false)
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{model.name}</span>
-                      {model.free && (
-                        <span className="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full">FREE</span>
-                      )}
-                    </div>
-                    <div className="text-xs text-slate-500">{model.provider}</div>
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="flex gap-2">
+            {/* Agent Selector */}
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-600 min-w-[120px] justify-between"
+                onClick={() => { setShowAgentDropdown(!showAgentDropdown); setShowModelDropdown(false) }}
+              >
+                <span className="truncate">
+                  {AVAILABLE_AGENTS.find(a => a.id === selectedAgent)?.name || 'Agent'}
+                </span>
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+              
+              {showAgentDropdown && (
+                <div className="absolute right-0 mt-1 w-64 bg-slate-800 border border-slate-600 rounded-lg shadow-lg z-50">
+                  {AVAILABLE_AGENTS.map((agent) => (
+                    <button
+                      key={agent.id}
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-700 first:rounded-t-lg last:rounded-b-lg ${
+                        selectedAgent === agent.id ? 'bg-slate-700 text-blue-400' : 'text-slate-300'
+                      }`}
+                      onClick={() => {
+                        setSelectedAgent(agent.id)
+                        setShowAgentDropdown(false)
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{agent.name}</span>
+                        {agent.canEdit && (
+                          <span className="bg-orange-500/20 text-orange-400 text-xs px-2 py-0.5 rounded-full">EDIT</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500">{agent.description}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Model Selector */}
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-600 min-w-[160px] justify-between"
+                onClick={() => { setShowModelDropdown(!showModelDropdown); setShowAgentDropdown(false) }}
+              >
+                <span className="truncate">
+                  {AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || 'Model'}
+                </span>
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+              
+              {showModelDropdown && (
+                <div className="absolute right-0 mt-1 w-72 bg-slate-800 border border-slate-600 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                  {AVAILABLE_MODELS.map((model) => (
+                    <button
+                      key={model.id}
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-700 first:rounded-t-lg last:rounded-b-lg ${
+                        selectedModel === model.id ? 'bg-slate-700 text-blue-400' : 'text-slate-300'
+                      }`}
+                      onClick={() => {
+                        setSelectedModel(model.id)
+                        setShowModelDropdown(false)
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{model.name}</span>
+                        {model.free && (
+                          <span className="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full">FREE</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500">{model.provider}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -302,6 +353,55 @@ export function ChatInterface() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Quick Actions for VPS */}
+        <div className="flex gap-2 flex-wrap pb-2 border-b border-slate-700">
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-slate-600 hover:bg-slate-700 text-slate-300 text-xs"
+            onClick={() => setInput('Show all running Docker containers')}
+          >
+            <Container className="h-3 w-3 mr-1" />
+            Containers
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-slate-600 hover:bg-slate-700 text-slate-300 text-xs"
+            onClick={() => setInput('Show disk usage and available space')}
+          >
+            <HardDrive className="h-3 w-3 mr-1" />
+            Disk
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-slate-600 hover:bg-slate-700 text-slate-300 text-xs"
+            onClick={() => setInput('Show system resources - CPU, memory, load')}
+          >
+            <Activity className="h-3 w-3 mr-1" />
+            Resources
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-slate-600 hover:bg-slate-700 text-slate-300 text-xs"
+            onClick={() => setInput('List all Coolify services and their status')}
+          >
+            <FolderTree className="h-3 w-3 mr-1" />
+            Services
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-slate-600 hover:bg-slate-700 text-slate-300 text-xs"
+            onClick={() => setInput('Show recent Docker logs for all containers')}
+          >
+            <Terminal className="h-3 w-3 mr-1" />
+            Logs
+          </Button>
+        </div>
+
         {/* Input */}
         <div className="flex gap-2">
           <input
@@ -309,7 +409,7 @@ export function ChatInterface() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask me anything about coding, debugging, or project management..."
+            placeholder="Ask me to manage your VPS, deploy apps, check logs..."
             className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={isLoading}
           />
